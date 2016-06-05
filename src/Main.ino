@@ -1,22 +1,29 @@
 #include <Homie.h>
 
+#include "GPSNode.hpp"
+
+using namespace Tracker;
+
 const int PIN_RELAY = 5;
 
-HomieNode gpsNode("gps", "gps");
-GPSNode gpsNode;
+HomieNode homieGPSNode("gps", "gps");
+GPSNode gpsNode = GPSNode(homieGPSNode);
 
 void setup() {
   Homie.setFirmware("stutz-tracker", "1.0.0");
   Homie.setLoopFunction(loopHandler);
   Homie.setSetupFunction(setupHandler);
-  Homie.registerNode(gpsNode);
+  Homie.registerNode(homieGPSNode);
 
   Homie.enableBuiltInLedIndicator(false);
   Homie.enableLogging(true);
 
   Homie.setup();
 
-  this->_interface->logger->log(F("Stutz Tracker initiated."));
+  Serial.println("Stutz Tracker initiated");
+}
+void loop() {
+  Homie.loop();
 }
 
 void setupHandler() {
@@ -27,9 +34,6 @@ void loopHandler() {
   gpsNode.loop();
 }
 
-void loop() {
-  Homie.loop();
-}
 
 // void setup() {
 //   pinMode(PIN_RELAY, OUTPUT);

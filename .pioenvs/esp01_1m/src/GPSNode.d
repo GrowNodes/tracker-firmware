@@ -1,4 +1,7 @@
 .pioenvs/esp01_1m/src/GPSNode.o: src/GPSNode.cpp \
+ .pioenvs/esp01_1m/homie-esp8266/Homie.h \
+ .pioenvs/esp01_1m/homie-esp8266/Homie.hpp \
+ .pioenvs/esp01_1m/homie-esp8266/Homie/MqttClient.hpp \
  .pioenvs/esp01_1m/ESP8266WiFi/ESP8266WiFi.h \
  .pioenvs/esp01_1m/ESP8266WiFi/include/wl_definitions.h \
  .pioenvs/esp01_1m/FrameworkArduino/IPAddress.h \
@@ -49,8 +52,6 @@
  .pioenvs/esp01_1m/FrameworkArduino/Server.h \
  .pioenvs/esp01_1m/ESP8266WiFi/WiFiClientSecure.h \
  .pioenvs/esp01_1m/ESP8266WiFi/include/ssl.h \
- .pioenvs/esp01_1m/homie-esp8266/Homie.hpp \
- .pioenvs/esp01_1m/homie-esp8266/Homie/MqttClient.hpp \
  .pioenvs/esp01_1m/PubSubClient_ID89/PubSubClient.h \
  .pioenvs/esp01_1m/FrameworkArduino/Stream.h \
  .pioenvs/esp01_1m/homie-esp8266/Homie/Datatypes/Interface.hpp \
@@ -143,4 +144,6 @@
  .pioenvs/esp01_1m/DNSServer/DNSServer.h \
  .pioenvs/esp01_1m/homie-esp8266/Homie/Boot/../Strings.hpp \
  .pioenvs/esp01_1m/homie-esp8266/Homie/Boot/BootOta.hpp \
- .pioenvs/esp01_1m/ESP8266httpUpdate/ESP8266httpUpdate.h src/GPSNode.hpp
+ .pioenvs/esp01_1m/ESP8266httpUpdate/ESP8266httpUpdate.h src/GPSNode.hpp \
+ src/utils/SDQueue.hpp src/utils/CircularQueueBuffer.hpp \
+ src/utils/CircularQueueMeta.hpp

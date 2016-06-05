@@ -9,6 +9,7 @@ namespace Tracker {
       void push(const char* bufferElement);
       void poll(const char* bufferElement);
       int getSize();
+      int getCount();
       bool isFull();
       bool isEmpty();
       int getBufferElementSize();

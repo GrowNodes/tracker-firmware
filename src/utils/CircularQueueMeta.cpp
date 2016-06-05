@@ -16,6 +16,11 @@ void CircularQueueMeta::empty() {
 int CircularQueueMeta::push() {
   int lastHead = this->_head;
   this->_head = (this->_head+1) % this->_size;
+
+  if(this->isFull()) {
+    this->_tail = (this->_tail+1) % this->_size;
+  }
+
   this->_count++;
   return lastHead;
 }

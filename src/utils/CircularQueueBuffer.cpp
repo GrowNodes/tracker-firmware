@@ -26,12 +26,16 @@ void CircularQueueBuffer::push(const char* bufferElement) {
 
 void CircularQueueBuffer::poll(const char* bufferElement) {
   const int pos = this->_meta.poll();
-  char* element = this->_buffer + pos*this->_bufferElementSize;
+  char* element = this->_buffer + (pos*this->_bufferElementSize);
   strncpy((char*)bufferElement, element, this->_bufferElementSize);
 }
 
 int CircularQueueBuffer::getSize() {
   return this->_meta.getSize();
+}
+
+int CircularQueueBuffer::getCount() {
+  return this->_meta.getCount();
 }
 
 int CircularQueueBuffer::getBufferElementSize() {

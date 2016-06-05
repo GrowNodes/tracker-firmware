@@ -1,16 +1,14 @@
-#include "CircularQueueMeta.hpp"
 #include "CircularQueueBuffer.hpp"
-#include <SPI.h>
-#include <SD.h>
+#include <Arduino.h>
 
 namespace Tracker {
   class SDQueue {
     public:
-      SDQueue(String name, int queueSize, int recordSize, int bufferSize);
+      SDQueue(String name, int maxQueueSize, int recordBytes, int bufferRecords);
       ~SDQueue();
       void setup();
       void push(char* record);
-      void poll(char* record);
+      bool poll(char* record);
       void flush();
       int getSize();
       int getCount();
@@ -20,7 +18,7 @@ namespace Tracker {
       CircularQueueMeta _meta;
       CircularQueueBuffer _buffer;
       String _name;
-      File _file;
-      char record;
+      char _record;
+      int _maxFileSize;
   };
 }
