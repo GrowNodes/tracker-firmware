@@ -15,6 +15,7 @@ void SDQueue::setup() {
     Serial.println("✖ SD initialization error");
   } else {
     Serial.println("SD initialized OK");
+    this->_loadMetaFile();
   }
 }
 
@@ -32,9 +33,36 @@ bool SDQueue::poll(char* record) {
     int pos = this->_meta.poll() * this->_buffer.getBufferElementSize();
     _file.readBytes(&this->_record, this->_buffer.getBufferElementSize());
     _file.close();
+    this->_writeMetaFile();
     return true;
   } else {
     return false;
+  }
+}
+
+void SDQueue::_writeMetaFile() {
+  File _file = SD.open(this->_name + ".meta", FILE_WRITE);
+  _file.seek(0);
+  _file.print(this->_meta.getCount());
+  _file.print(this->_meta.getHead());
+  _file.print(this->_meta.getSize());
+  _file.print(this->_meta.getTail());
+  _file.close();
+  Serial.println("Queue metadata saved to disk");
+}
+void SDQueue::_loadMetaFile() {
+  File _file = SD.open(this->_name + ".meta", FILE_READ);
+  if(_file) {
+    _file.seek(0);
+    int count = _file.parseInt();
+    int head = _file.parseInt();
+    int size = _file.parseInt();
+    int tail = _file.parseInt();
+    this->_meta.initialize(size, count, head, tail);
+    _file.close();
+    Serial.println("Metadata loaded from disk");
+  } else {
+    Serial.println("Metadata file doesn't exist yet");
   }
 }
 
@@ -45,7 +73,9 @@ void SDQueue::flush() {
 
   } else {
     Serial.printf("Opened file for flushing buffer. buffer records=%d\n", this->_buffer.getCount());
+    bool atLeastOne = false;
     while(!this->_buffer.isEmpty()) {
+      atLeastOne = true;
       this->_buffer.poll(&_record);
       int pos = this->_meta.push() * this->_buffer.getBufferElementSize();
       //expand file size as needed
@@ -62,10 +92,13 @@ void SDQueue::flush() {
       _file.write(&this->_record, this->_buffer.getBufferElementSize());
       _file.write("\n");
     }
-    _file.close();
-    this->_buffer.empty();
-    Serial.println("Buffer flushed to disk");
+    if(atLeastOne) {
+      this->_writeMetaFile();
+      this->_buffer.empty();
+      Serial.println("Buffer flushed to disk");
+    }
   }
+  _file.close();
 }
 
 int SDQueue::getSize() {

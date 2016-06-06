@@ -36,6 +36,14 @@ int CircularQueueMeta::poll() {
   }
 }
 
+void CircularQueueMeta::initialize(int size, int count, int head, int tail) {
+  this->_size = size;
+  this->_count = size;
+  this->_head = head;
+  this->_tail = tail;
+}
+
+
 int CircularQueueMeta::getHead() {
   return this->_head;
 }

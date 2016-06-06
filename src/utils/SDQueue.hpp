@@ -20,5 +20,7 @@ namespace Tracker {
       String _name;
       char _record;
       int _maxFileSize;
+      void _writeMetaFile();
+      void _loadMetaFile();
   };
 }

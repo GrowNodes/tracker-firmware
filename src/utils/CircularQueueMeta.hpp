@@ -12,6 +12,7 @@ namespace Tracker {
       int getTail();
       bool isFull();
       bool isEmpty();
+      void initialize(int size, int count, int head, int tail);
 
     private:
       int _size;

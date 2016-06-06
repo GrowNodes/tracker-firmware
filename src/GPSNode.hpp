@@ -15,6 +15,7 @@ namespace Tracker {
       char _gpsRecord[70];
       char _tmpGpsRecord[70];
       void _readGpsRecord(const char* prefix, char* gpsRecord);
-      HomieNode _homieNode;
+      bool _validateNmeaChecksum(char* gpsRecord);
+    HomieNode _homieNode;
   };
 }

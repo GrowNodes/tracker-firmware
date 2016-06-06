@@ -34,19 +34,50 @@ void GPSNode::loop() {
 
   //record gps messages
   if(this->_gpsTimer.check()) {
+
+    //read message from module
     if(this->_messageType) {
+      Serial.println("Recording GGA GPS message");
       this->_readGpsRecord(GPS_GGA, recordBuffer);
     } else {
+      Serial.println("Recording RMC GPS message");
       this->_readGpsRecord(GPS_RMC, recordBuffer);
     }
     this->_messageType = !this->_messageType;
-    this->_sdQueue.push(recordBuffer);
+
+    //check data integrity and record
+    Serial.printf("GPS: %s\n", recordBuffer);
+    if(this->_validateNmeaChecksum(recordBuffer)) {
+      Serial.println("GPS record valid. Storing.");
+      this->_sdQueue.push(recordBuffer);
+    } else {
+      Serial.printf("GPS record invalid. %s\n", recordBuffer);
+    }
     this->_gpsTimer.tick();
   }
 }
 
 void GPSNode::_readGpsRecord(const char* prefix, char* gpsRecord) {
   Serial.find(prefix);
-  Serial.readBytesUntil('\n', this->_tmpGpsRecord, 70);
+  Serial.readBytesUntil('\n', &this->_tmpGpsRecord[0], 70);
   sprintf(gpsRecord, "%s%s", prefix, this->_tmpGpsRecord);
+}
+
+// this takes a nmea gps string, and validates it againts the checksum
+// at the end if the string. (requires first byte to be $)
+bool GPSNode::_validateNmeaChecksum(char* gpsRecord) {
+  unsigned int realCrc = 0;
+  int len = strlen(gpsRecord);
+  for (int i=0; i<len; i++) {
+    realCrc ^= (char)*(gpsRecord+i);
+  }
+  Serial.printf("realCrcI=%d\n", realCrc);
+  parei aqui
+  Serial.printf("realCrcH=%d\n", realCrc);
+
+  Serial.printf("correctCrcH=%s\n", gpsRecord+(len-3));
+  unsigned int correctCrc = strtoul(gpsRecord+(len-3), NULL, 16);
+  Serial.printf("correctCrcI=%s\n", correctCrc);
+
+  return realCrc == correctCrc;
 }

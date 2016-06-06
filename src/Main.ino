@@ -4,8 +4,6 @@
 
 using namespace Tracker;
 
-const int PIN_RELAY = 5;
-
 HomieNode homieGPSNode("gps", "gps");
 GPSNode gpsNode = GPSNode(homieGPSNode);
 

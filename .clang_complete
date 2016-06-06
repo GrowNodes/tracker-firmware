@@ -6,9 +6,6 @@
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/cores/esp8266/umm_malloc
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/ESP8266WiFi/src
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/ESP8266WiFi/src/include
--I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/SPI
--I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/SD/src
--I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/SD/src/utility
 -I/Users/flaviostutz/.platformio/lib/PubSubClient_ID89/src
 -I/Users/flaviostutz/.platformio/lib/Json_ID64
 -I/Users/flaviostutz/.platformio/lib/Json_ID64/include
@@ -30,9 +27,11 @@
 -I/Users/flaviostutz/Documents/development/stutzlab/tracker-firmware/lib/homie-esp8266/src/Homie
 -I/Users/flaviostutz/Documents/development/stutzlab/tracker-firmware/lib/homie-esp8266/src/Homie/Boot
 -I/Users/flaviostutz/Documents/development/stutzlab/tracker-firmware/lib/homie-esp8266/src/Homie/Datatypes
+-I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/SPI
+-I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/SD/src
+-I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/SD/src/utility
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/tools/sdk/include
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/tools/sdk/lwip/include
--I/Users/flaviostutz/.platformio/lib/Homie_ID555/src
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/ArduinoOTA
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/EEPROM
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/ESP8266AVRISP/src
