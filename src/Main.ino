@@ -1,3 +1,5 @@
+//tested against https://github.com/esp8266/Arduino.git version 2.3.0-rc1
+
 #include <Homie.h>
 
 #include "GPSNode.hpp"

@@ -1,3 +1,6 @@
 [submodule "lib/homie-esp8266"]
 	path = lib/homie-esp8266
 	url = https://github.com/stutzlab/homie-esp8266.git
+[submodule "lib/TinyGPSPlus"]
+	path = lib/TinyGPSPlus
+	url = https://github.com/mikalhart/TinyGPSPlus.git

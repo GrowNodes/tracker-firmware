@@ -32,6 +32,7 @@
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/SD/src/utility
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/tools/sdk/include
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/tools/sdk/lwip/include
+-I/Users/flaviostutz/Documents/development/stutzlab/tracker-firmware/lib/TinyGPSPlus
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/ArduinoOTA
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/EEPROM
 -I/Users/flaviostutz/.platformio/packages/framework-arduinoespressif/libraries/ESP8266AVRISP/src

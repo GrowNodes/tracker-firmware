@@ -38,4 +38,5 @@
  /Users/flaviostutz/.platformio/packages/framework-arduinoespressif/tools/sdk/include/ip_addr.h \
  /Users/flaviostutz/.platformio/packages/framework-arduinoespressif/tools/sdk/include/queue.h \
  /Users/flaviostutz/.platformio/packages/framework-arduinoespressif/tools/sdk/include/spi_flash.h \
- .pioenvs/esp01_1m/FrameworkArduino/cont.h
+ .pioenvs/esp01_1m/FrameworkArduino/cont.h \
+ .pioenvs/esp01_1m/FrameworkArduino/core_version.h

@@ -61,10 +61,9 @@
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/DynamicJsonBuffer.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/BlockJsonBuffer.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../JsonBuffer.hpp \
- .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../String.hpp \
- .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Configuration.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../JsonVariant.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/JsonPrintable.hpp \
+ .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/../Configuration.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/DummyPrint.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/../Print.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/IndentedPrint.hpp \
@@ -79,6 +78,7 @@
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/Prettyfier.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/StaticStringBuilder.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/DynamicStringBuilder.hpp \
+ .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/../String.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/JsonVariantContent.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../Internals/JsonVariantType.hpp \
  .pioenvs/esp01_1m/Json_ID64/include/ArduinoJson/Internals/../JsonVariantBase.hpp \

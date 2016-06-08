@@ -22,7 +22,7 @@ void GPSNode::setup() {
 void GPSNode::loop() {
   char* recordBuffer = &this->_gpsRecord[0];
 
-  //upload gps data do cloud
+  //upload gps data to cloud
   if(WiFi.status()==WL_CONNECTED) {
     //send 2 messages max at each loop step
     for(int i=0; i < min(this->_sdQueue.getCount(), 2); i++) {
@@ -46,12 +46,12 @@ void GPSNode::loop() {
     this->_messageType = !this->_messageType;
 
     //check data integrity and record
-    Serial.printf("GPS: %s\n", recordBuffer);
     if(this->_validateNmeaChecksum(recordBuffer)) {
-      Serial.println("GPS record valid. Storing.");
       this->_sdQueue.push(recordBuffer);
+      Homie.setNodeProperty(this->_homieNode, "data", recordBuffer);
+      Serial.println("Sent gps data to mqtt");
     } else {
-      Serial.printf("GPS record invalid. %s\n", recordBuffer);
+      Serial.println("GPS record invalid");
     }
     this->_gpsTimer.tick();
   }
@@ -59,25 +59,30 @@ void GPSNode::loop() {
 
 void GPSNode::_readGpsRecord(const char* prefix, char* gpsRecord) {
   Serial.find(prefix);
-  Serial.readBytesUntil('\n', &this->_tmpGpsRecord[0], 70);
-  sprintf(gpsRecord, "%s%s", prefix, this->_tmpGpsRecord);
+  char tmp[70] = "000000000000000000";
+  Serial.readBytesUntil('\n', tmp, sizeof(tmp));
+  sprintf(gpsRecord, "%s%s", prefix, tmp);
+  // Serial.println(gpsRecord);
 }
 
 // this takes a nmea gps string, and validates it againts the checksum
 // at the end if the string. (requires first byte to be $)
 bool GPSNode::_validateNmeaChecksum(char* gpsRecord) {
-  unsigned int realCrc = 0;
   int len = strlen(gpsRecord);
-  for (int i=0; i<len; i++) {
-    realCrc ^= (char)*(gpsRecord+i);
+  byte realCrc = 0;
+  for (int i=1; i<len-4; i++) {
+    realCrc ^= (byte)*(gpsRecord+i);
   }
-  Serial.printf("realCrcI=%d\n", realCrc);
-  parei aqui
-  Serial.printf("realCrcH=%d\n", realCrc);
-
-  Serial.printf("correctCrcH=%s\n", gpsRecord+(len-3));
-  unsigned int correctCrc = strtoul(gpsRecord+(len-3), NULL, 16);
-  Serial.printf("correctCrcI=%s\n", correctCrc);
+  byte correctCrc = (byte)(16 * this->_fromHex(*(gpsRecord+(len-3))) + this->_fromHex(*(gpsRecord+(len-2))));
 
   return realCrc == correctCrc;
+}
+
+int GPSNode::_fromHex(char a) {
+  if (a >= 'A' && a <= 'F')
+    return a - 'A' + 10;
+  else if (a >= 'a' && a <= 'f')
+    return a - 'a' + 10;
+  else
+    return a - '0';
 }

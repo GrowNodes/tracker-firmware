@@ -94,6 +94,9 @@ class EspClass {
 
         void deepSleep(uint32_t time_us, RFMode mode = RF_DEFAULT);
 
+        bool rtcUserMemoryRead(uint32_t offset, uint32_t *data, size_t size);
+        bool rtcUserMemoryWrite(uint32_t offset, uint32_t *data, size_t size);
+
         void reset();
         void restart();
 
@@ -103,6 +106,7 @@ class EspClass {
         uint32_t getChipId();
 
         const char * getSdkVersion();
+        String getCoreVersion();
 
         uint8_t getBootVersion();
         uint8_t getBootMode();
