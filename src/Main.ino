@@ -10,10 +10,11 @@ HomieNode homieGPSNode("gps", "gps");
 GPSNode gpsNode = GPSNode(homieGPSNode);
 
 void setup() {
-  Homie.setFirmware("stutz-tracker", "1.0.0");
+  Serial.begin(9600);
+  Homie_setFirmware("stutz-tracker", "1.0.0");
+  Homie_setBrand("StutzTracker");
   Homie.setLoopFunction(loopHandler);
   Homie.setSetupFunction(setupHandler);
-  Homie.registerNode(homieGPSNode);
 
   Homie.enableBuiltInLedIndicator(false);
   Homie.enableLogging(true);
@@ -22,6 +23,7 @@ void setup() {
 
   Serial.println("Stutz Tracker initiated");
 }
+
 void loop() {
   Homie.loop();
 }

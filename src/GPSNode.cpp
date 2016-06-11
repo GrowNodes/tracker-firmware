@@ -1,6 +1,12 @@
 #include <Homie.h>
 #include <ESP8266WiFi.h>
+#include <ESP8266HttpClient.h>
 #include "GPSNode.hpp"
+
+//BENCHMARKS RESULTS
+//ADSL 5mbps
+//MQTT: 2 messages/s (size 70 bytes each)
+//POST 545 bytes/s
 
 using namespace Tracker;
 
@@ -17,6 +23,16 @@ GPSNode::GPSNode(HomieNode homieNode) :
 void GPSNode::setup() {
   this->_sdQueue.setup();
   this->_gpsTimer.setInterval(3000, true);
+  HomieNode h = this->_homieNode;
+  this->_homieNode.subscribe("factoryReset", [h](String value) {
+    if(value == "true") {
+      Serial.println("Factory reset requested");
+      Homie.setNodeProperty(h, "factoryReset", "false");
+      Homie.eraseConfig();
+      ESP.restart();
+    }
+    return true;
+  });
 }
 
 void GPSNode::loop() {
@@ -30,6 +46,50 @@ void GPSNode::loop() {
       Homie.setNodeProperty(this->_homieNode, "data", recordBuffer);
       Serial.println("Sent gps data to mqtt");
     }
+
+    //---- BEGIN HTTP POST TEST
+    WiFiClient client;
+    if (!client.connect("api.stutzthings.com", 80)) {
+      Serial.println("connection failed");
+      return;
+    }
+    //http.begin("http://api.stutzthings.com/v1/test");
+    Serial.println("Initiating POST");
+    client.print(String("POST /v1/test HTTP/1.1\r\n") +
+                  String("Host: api.stutzthings.com\r\n") +
+                  String("Content-Length: 36000\r\n") +
+                  String("Content-Type: text/plain\r\n\r\n"));
+    //1k - 1800ms (10 x 100) - 550B/s
+    //2k - 1800ms (10 x 200) - 1kB/s
+    //3k - 1800ms (10 x 300) - 1.6kB/s
+    //4k - 1850ms (10 x 400) -> 2kB/s
+    //6k - 1900ms (10 x 600) -> 3kB/s
+    //12k - 1980ms (10 x 1200) -> 6kB/s <- optimal chunk size (1200 bytes)
+    //24k - 3970ms (10 x 2400) -> 6kB/s <- stagnado
+    //36k - 6600 (30 x 1200) -> 5.4kB/s
+    int s = millis();
+    for(int i=0; i<30; i++) {
+      client.print("012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
+      Serial.print(".");
+      yield();
+    }
+    Serial.print(millis()-s);
+    int timeout = millis();
+    while (client.available() == 0) {
+      if (millis() - timeout > 5000) {
+        Serial.println(">>> Client Timeout!");
+        client.stop();
+        return;
+      }
+    }
+    while(client.available()) {
+      // client.readString();
+      Serial.print(client.readString());
+    }
+    Serial.println("POST FINISHED");
+    client.stop();
+    //---- END TEST
+
   }
 
   //record gps messages
@@ -48,7 +108,8 @@ void GPSNode::loop() {
     //check data integrity and record
     if(this->_validateNmeaChecksum(recordBuffer)) {
       this->_sdQueue.push(recordBuffer);
-      Homie.setNodeProperty(this->_homieNode, "data", recordBuffer);
+
+      //Homie.setNodeProperty(this->_homieNode, "data", recordBuffer);
       Serial.println("Sent gps data to mqtt");
     } else {
       Serial.println("GPS record invalid");
