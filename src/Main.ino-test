@@ -1,0 +1,14 @@
+#include "test/CircularQueueMetaTest.cpp"
+//#include "test/CircularQueueBufferTest.cpp"
+
+using namespace Tracker;
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("Initializing tests");
+  testQueueMeta();
+  //testQueueBuffer();
+}
+
+void loop() {
+}

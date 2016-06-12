@@ -24,10 +24,34 @@ void CircularQueueBuffer::push(const char* bufferElement) {
   strncpy(b, (char*)bufferElement, this->_bufferElementSize);
 }
 
-void CircularQueueBuffer::poll(const char* bufferElement) {
+bool CircularQueueBuffer::poll(const char* bufferElement) {
   const int pos = this->_meta.poll();
-  char* element = this->_buffer + (pos*this->_bufferElementSize);
-  strncpy((char*)bufferElement, element, this->_bufferElementSize);
+  if(pos!=-1) {
+    char* element = this->_buffer + (pos*this->_bufferElementSize);
+    strncpy((char*)bufferElement, element, this->_bufferElementSize);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool CircularQueueBuffer::peek(const char* bufferElement) {
+  return this->peek(bufferElement, 0);
+}
+
+bool CircularQueueBuffer::peek(const char* bufferElement, int n) {
+  const int pos = this->_meta.peek(n);
+  if(pos!=-1) {
+    char* element = this->_buffer + (pos*this->_bufferElementSize);
+    strncpy((char*)bufferElement, element, this->_bufferElementSize);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+void CircularQueueBuffer::removeElements(int n) {
+  this->_meta.removeElements(n);
 }
 
 int CircularQueueBuffer::getSize() {

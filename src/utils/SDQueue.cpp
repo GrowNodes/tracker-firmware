@@ -26,14 +26,32 @@ void SDQueue::push(char* record) {
   }
 }
 
+void SDQueue::removeElements(int n) {
+  this->_meta.removeElements(n);
+  //update metadata file
+  this->_writeMetaFile();
+}
+
 bool SDQueue::poll(char* record) {
+  //load last element
+  bool result = this->peek(record);
+  if(result) {
+    this->removeElements(1);
+  }
+  return result;
+}
+
+bool SDQueue::peek(char* record) {
+  return this->peek(record, 0);
+}
+
+bool SDQueue::peek(char* record, int n) {
   this->flush();
-  if(!this->_meta.isEmpty()) {
+  if(this->_meta.peek(n)!=-1) {
     File _file = SD.open(this->_name, FILE_READ);
-    int pos = this->_meta.poll() * this->_buffer.getBufferElementSize();
+    int pos = this->_meta.peek(n) * this->_buffer.getBufferElementSize();
     _file.readBytes(&this->_record, this->_buffer.getBufferElementSize());
     _file.close();
-    this->_writeMetaFile();
     return true;
   } else {
     return false;

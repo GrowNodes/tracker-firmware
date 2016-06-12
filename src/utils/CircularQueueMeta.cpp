@@ -19,9 +19,10 @@ int CircularQueueMeta::push() {
 
   if(this->isFull()) {
     this->_tail = (this->_tail+1) % this->_size;
+  } else {
+    this->_count++;
   }
 
-  this->_count++;
   return lastHead;
 }
 
@@ -33,6 +34,24 @@ int CircularQueueMeta::poll() {
     return lastTail;
   } else {
     return -1;
+  }
+}
+
+int CircularQueueMeta::peek() {
+  return this->peek(0);
+}
+
+int CircularQueueMeta::peek(int n) {
+  if(n<this->getCount()) {
+    return (this->_tail + n) % this->_size;
+  } else {
+    return -1;
+  }
+}
+
+void CircularQueueMeta::removeElements(int n) {
+  for(int i=0; i<n; i++) {
+    this->poll();
   }
 }
 

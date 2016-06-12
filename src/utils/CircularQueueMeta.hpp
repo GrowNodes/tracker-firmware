@@ -6,6 +6,9 @@ namespace Tracker {
       void empty();
       int push();
       int poll();
+      int peek();
+      int peek(int n);
+      void removeElements(int n);
       int getSize();
       int getCount();
       int getHead();

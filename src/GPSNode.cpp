@@ -1,38 +1,38 @@
-#include <Homie.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HttpClient.h>
 #include "GPSNode.hpp"
 
-//BENCHMARKS RESULTS
+//BENCHMARK RESULTS
 //ADSL 5mbps
 //MQTT: 2 messages/s (size 70 bytes each)
-//POST 545 bytes/s
+//POST:
+//1k - 1800ms (10 x 100) - 550B/s
+//2k - 1800ms (10 x 200) - 1kB/s
+//3k - 1800ms (10 x 300) - 1.6kB/s
+//4k - 1850ms (10 x 400) -> 2kB/s
+//6k - 1900ms (10 x 600) -> 3kB/s
+//12k - 1980ms (10 x 1200) -> 6kB/s <- optimal chunk size (1200 bytes)
+//24k - 3970ms (10 x 2400) -> 6kB/s <- stagnado
+//36k - 6600 (30 x 1200) -> 5.4kB/s
 
 using namespace Tracker;
 
 const char* GPS_GGA = "$GPGGA";
 const char* GPS_RMC = "$GPRMC";
+const char CHAR_SPACE = ' ';
 
 //String name, int maxQueueSize, int recordBytes, int bufferRecords
-GPSNode::GPSNode(HomieNode homieNode) :
+GPSNode::GPSNode(ConfigNode configNode) :
   _sdQueue(SDQueue("gps-data", 10, 70, 5)),
   _gpsTimer(HomieInternals::Timer()),
-  _homieNode(homieNode) {
+  _homieNode(HomieNode("gps", "gps")),
+  _configNode(configNode) {
 }
 
 void GPSNode::setup() {
   this->_sdQueue.setup();
   this->_gpsTimer.setInterval(3000, true);
   HomieNode h = this->_homieNode;
-  this->_homieNode.subscribe("factoryReset", [h](String value) {
-    if(value == "true") {
-      Serial.println("Factory reset requested");
-      Homie.setNodeProperty(h, "factoryReset", "false");
-      Homie.eraseConfig();
-      ESP.restart();
-    }
-    return true;
-  });
 }
 
 void GPSNode::loop() {
@@ -41,55 +41,7 @@ void GPSNode::loop() {
   //upload gps data to cloud
   if(WiFi.status()==WL_CONNECTED) {
     //send 2 messages max at each loop step
-    for(int i=0; i < min(this->_sdQueue.getCount(), 2); i++) {
-      this->_sdQueue.poll(recordBuffer);
-      Homie.setNodeProperty(this->_homieNode, "data", recordBuffer);
-      Serial.println("Sent gps data to mqtt");
-    }
-
-    //---- BEGIN HTTP POST TEST
-    WiFiClient client;
-    if (!client.connect("api.stutzthings.com", 80)) {
-      Serial.println("connection failed");
-      return;
-    }
-    //http.begin("http://api.stutzthings.com/v1/test");
-    Serial.println("Initiating POST");
-    client.print(String("POST /v1/test HTTP/1.1\r\n") +
-                  String("Host: api.stutzthings.com\r\n") +
-                  String("Content-Length: 36000\r\n") +
-                  String("Content-Type: text/plain\r\n\r\n"));
-    //1k - 1800ms (10 x 100) - 550B/s
-    //2k - 1800ms (10 x 200) - 1kB/s
-    //3k - 1800ms (10 x 300) - 1.6kB/s
-    //4k - 1850ms (10 x 400) -> 2kB/s
-    //6k - 1900ms (10 x 600) -> 3kB/s
-    //12k - 1980ms (10 x 1200) -> 6kB/s <- optimal chunk size (1200 bytes)
-    //24k - 3970ms (10 x 2400) -> 6kB/s <- stagnado
-    //36k - 6600 (30 x 1200) -> 5.4kB/s
-    int s = millis();
-    for(int i=0; i<30; i++) {
-      client.print("012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789");
-      Serial.print(".");
-      yield();
-    }
-    Serial.print(millis()-s);
-    int timeout = millis();
-    while (client.available() == 0) {
-      if (millis() - timeout > 5000) {
-        Serial.println(">>> Client Timeout!");
-        client.stop();
-        return;
-      }
-    }
-    while(client.available()) {
-      // client.readString();
-      Serial.print(client.readString());
-    }
-    Serial.println("POST FINISHED");
-    client.stop();
-    //---- END TEST
-
+    this->_sendNextGpsData();
   }
 
   //record gps messages
@@ -108,13 +60,94 @@ void GPSNode::loop() {
     //check data integrity and record
     if(this->_validateNmeaChecksum(recordBuffer)) {
       this->_sdQueue.push(recordBuffer);
-
-      //Homie.setNodeProperty(this->_homieNode, "data", recordBuffer);
-      Serial.println("Sent gps data to mqtt");
+      Serial.println("GPS record stored");
     } else {
       Serial.println("GPS record invalid");
     }
     this->_gpsTimer.tick();
+  }
+}
+
+void GPSNode::_sendNextGpsData() {
+  Serial.println("Sent gps data to server");
+  int startTime = millis();
+
+  //connect to server
+  WiFiClient client;
+  if (!client.connect(this->_configNode.getUploadServerHost().c_str(), this->_configNode.getUploadServerPort())) {
+    Serial.println("Upload: Server connection failed");
+    return;
+  }
+
+  Serial.println("Upload: Initiating POST");
+  //perform a chuked upload. chunk size~=1200 bytes; total payload~=12000 bytes
+  client.print(String("POST /v1/" + String(Homie.getBaseTopic()) + " HTTP/1.1\r\n") +
+                String("Host: "+ String(this->_configNode.getUploadServerHost()) +"\r\n") +
+                String("Transfer-Encoding: chunked\r\n") +
+                String("Content-Type: text/plain\r\n\r\n"));
+  int sdRecords = 0;
+  for(int i=0; i<10; i++) {
+    //fill chunk with ~1200 bytes
+    int len = 0;
+    while(this->_sdQueue.peek(this->_gpsRecord, sdRecords++) && len < 1150) {
+      strcpy(this->_gpsUploadBuffer + len, this->_gpsRecord);
+      len += strlen(this->_gpsRecord);
+      strcpy(this->_gpsUploadBuffer + len++, "\n");
+      strcpy(this->_gpsUploadBuffer + len++, 0);
+    }
+    //send chunk
+    client.print(String(strlen(this->_gpsUploadBuffer)) + "\r\n");
+    client.print(this->_gpsUploadBuffer);
+    Serial.print(".");
+    yield();
+  }
+  client.print("0\r\n\r\n");
+  Serial.print("Upload: chunks sent. records=" + String(sdRecords));
+
+  //wait for response available
+  int timeout = millis();
+  while (client.available() < 15) {
+    if (millis() - timeout > 5000) {
+      Serial.print("Upload: server timeout");
+      client.stop();
+      return;
+    }
+  }
+
+  //process response
+  bool success = false;
+  if(client.readStringUntil(CHAR_SPACE).length()>0) {
+    String code = client.readStringUntil(CHAR_SPACE);
+    if(code == "200") {
+      Serial.println("Upload: server 200 OK");
+      success = true;
+      this->_totalUploadCountSuccess++;
+      this->_totalUploadTimeSuccess+=(millis()-startTime);
+      this->_totalUploadRecordsSuccess+=sdRecords;
+      this->_sdQueue.removeElements(sdRecords);
+      Serial.println("Upload: sent records removed from disk");
+    } else {
+      this->_totalUploadCountError++;
+      this->_totalUploadTimeError+=(millis()-startTime);
+      Serial.println("Upload: server error " + String(code));
+    }
+  } else {
+    this->_totalUploadCountError++;
+    this->_totalUploadTimeError+=(millis()-startTime);
+    Serial.println("Upload: invalid server response");
+  }
+
+  client.stop();
+  Serial.println("Upload: post finished");
+
+  //metrics
+  if(success) {
+    Homie.setNodeProperty(this->_homieNode, "totalUploadCountSuccess", String(this->_totalUploadCountSuccess));
+    Homie.setNodeProperty(this->_homieNode, "totalUploadTimeSuccess", String(this->_totalUploadTimeSuccess));
+    Homie.setNodeProperty(this->_homieNode, "totalUploadRecordsSuccess", String(this->_totalUploadRecordsSuccess));
+  } else {
+    Homie.setNodeProperty(this->_homieNode, "totalUploadCountError", String(this->_totalUploadCountError));
+    Homie.setNodeProperty(this->_homieNode, "totalUploadTimeError", String(this->_totalUploadTimeError));
   }
 }
 

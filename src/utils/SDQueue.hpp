@@ -9,6 +9,9 @@ namespace Tracker {
       void setup();
       void push(char* record);
       bool poll(char* record);
+      bool peek(char* record);
+      bool peek(char* record, int n);
+      void removeElements(int n);
       void flush();
       int getSize();
       int getCount();
