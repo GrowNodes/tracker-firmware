@@ -25,6 +25,7 @@ const char CHAR_SPACE = ' ';
 GPSNode::GPSNode(ConfigNode configNode) :
   _sdQueue(SDQueue("gps-data", 10, 70, 5)),
   _gpsTimer(HomieInternals::Timer()),
+  _metricsTimer(HomieInternals::Timer()),
   _homieNode(HomieNode("gps", "gps")),
   _configNode(configNode) {
 }
@@ -32,6 +33,7 @@ GPSNode::GPSNode(ConfigNode configNode) :
 void GPSNode::setup() {
   this->_sdQueue.setup();
   this->_gpsTimer.setInterval(3000, true);
+  this->_metricsTimer.setInterval(60000, true);
   HomieNode h = this->_homieNode;
 }
 
@@ -40,8 +42,15 @@ void GPSNode::loop() {
 
   //upload gps data to cloud
   if(WiFi.status()==WL_CONNECTED) {
-    //send 2 messages max at each loop step
-    this->_sendNextGpsData();
+    if(this->_sdQueue.getCount() > 100) {
+      //send bulk stored records
+      this->_sendNextGpsData();
+    }
+
+    if(this->_metricsTimer.check()) {
+      this->_reportMetrics();
+      this->_metricsTimer.tick();
+    }
   }
 
   //record gps messages
@@ -59,9 +68,22 @@ void GPSNode::loop() {
 
     //check data integrity and record
     if(this->_validateNmeaChecksum(recordBuffer)) {
+
       this->_sdQueue.push(recordBuffer);
+      this->_totalRecordsReadSuccess++;
       Serial.println("GPS record stored");
+
+      //send position online if connected
+      if(WiFi.status()==WL_CONNECTED) {
+        if(this->_messageType) {
+          Homie.setNodeProperty(this->_homieNode, "gps_rmc", recordBuffer);
+        } else {
+          Homie.setNodeProperty(this->_homieNode, "gps_gga", recordBuffer);
+        }
+      }
+
     } else {
+      this->_totalRecordsReadError++;
       Serial.println("GPS record invalid");
     }
     this->_gpsTimer.tick();
@@ -69,10 +91,11 @@ void GPSNode::loop() {
 }
 
 void GPSNode::_sendNextGpsData() {
+
   Serial.println("Sent gps data to server");
-  int startTime = millis();
 
   //connect to server
+  int startTime = millis();
   WiFiClient client;
   if (!client.connect(this->_configNode.getUploadServerHost().c_str(), this->_configNode.getUploadServerPort())) {
     Serial.println("Upload: Server connection failed");
@@ -110,6 +133,8 @@ void GPSNode::_sendNextGpsData() {
     if (millis() - timeout > 5000) {
       Serial.print("Upload: server timeout");
       client.stop();
+      this->_totalUploadCountError++;
+      this->_totalUploadTimeError+=(millis()-startTime);
       return;
     }
   }
@@ -139,16 +164,16 @@ void GPSNode::_sendNextGpsData() {
 
   client.stop();
   Serial.println("Upload: post finished");
+}
 
-  //metrics
-  if(success) {
-    Homie.setNodeProperty(this->_homieNode, "totalUploadCountSuccess", String(this->_totalUploadCountSuccess));
-    Homie.setNodeProperty(this->_homieNode, "totalUploadTimeSuccess", String(this->_totalUploadTimeSuccess));
-    Homie.setNodeProperty(this->_homieNode, "totalUploadRecordsSuccess", String(this->_totalUploadRecordsSuccess));
-  } else {
-    Homie.setNodeProperty(this->_homieNode, "totalUploadCountError", String(this->_totalUploadCountError));
-    Homie.setNodeProperty(this->_homieNode, "totalUploadTimeError", String(this->_totalUploadTimeError));
-  }
+void GPSNode::_reportMetrics() {
+  Homie.setNodeProperty(this->_homieNode, "totalUploadCountSuccess", String(this->_totalUploadCountSuccess));
+  Homie.setNodeProperty(this->_homieNode, "totalUploadTimeSuccess", String(this->_totalUploadTimeSuccess));
+  Homie.setNodeProperty(this->_homieNode, "totalUploadRecordsSuccess", String(this->_totalUploadRecordsSuccess));
+  Homie.setNodeProperty(this->_homieNode, "totalUploadCountError", String(this->_totalUploadCountError));
+  Homie.setNodeProperty(this->_homieNode, "totalUploadTimeError", String(this->_totalUploadTimeError));
+  Homie.setNodeProperty(this->_homieNode, "totalRecordsReadSuccess", String(this->_totalRecordsReadSuccess));
+  Homie.setNodeProperty(this->_homieNode, "totalRecordsReadError", String(this->_totalRecordsReadError));
 }
 
 void GPSNode::_readGpsRecord(const char* prefix, char* gpsRecord) {
