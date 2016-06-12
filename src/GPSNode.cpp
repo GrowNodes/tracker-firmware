@@ -33,7 +33,7 @@ GPSNode::GPSNode(ConfigNode configNode) :
 void GPSNode::setup() {
   this->_sdQueue.setup();
   this->_gpsTimer.setInterval(3000, true);
-  this->_metricsTimer.setInterval(60000, true);
+  this->_metricsTimer.setInterval(10000, true);
   HomieNode h = this->_homieNode;
 }
 
