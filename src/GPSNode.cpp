@@ -42,19 +42,21 @@ void GPSNode::loop() {
 
   //upload gps data to cloud
   if(WiFi.status()==WL_CONNECTED) {
-    if(this->_sdQueue.getCount() > 100) {
+    if(this->_sdQueue.getCount() > 7) {
       //send bulk stored records
       this->_sendNextGpsData();
     }
 
     if(this->_metricsTimer.check()) {
-      this->_reportMetrics();
       this->_metricsTimer.tick();
+      Serial.println("Reporting metrics");
+      this->_reportMetrics();
     }
   }
 
   //record gps messages
   if(this->_gpsTimer.check()) {
+    this->_gpsTimer.tick();
 
     //read message from module
     if(this->_messageType) {
@@ -76,9 +78,9 @@ void GPSNode::loop() {
       //send position online if connected
       if(WiFi.status()==WL_CONNECTED) {
         if(this->_messageType) {
-          Homie.setNodeProperty(this->_homieNode, "gps_rmc", recordBuffer);
+          Homie.setNodeProperty(this->_homieNode, "rmc", recordBuffer);
         } else {
-          Homie.setNodeProperty(this->_homieNode, "gps_gga", recordBuffer);
+          Homie.setNodeProperty(this->_homieNode, "gga", recordBuffer);
         }
       }
 
@@ -86,52 +88,62 @@ void GPSNode::loop() {
       this->_totalRecordsReadError++;
       Serial.println("GPS record invalid");
     }
-    this->_gpsTimer.tick();
   }
 }
 
 void GPSNode::_sendNextGpsData() {
 
-  Serial.println("Sent gps data to server");
+  Serial.println("Sending gps data to server");
+  this->_sdQueue.flush();//avoid paralel flush() during server connection (too much mem)
 
   //connect to server
   int startTime = millis();
   WiFiClient client;
+  Serial.printf("Host=%s:%d\n", this->_configNode.getUploadServerHost().c_str(), this->_configNode.getUploadServerPort());
   if (!client.connect(this->_configNode.getUploadServerHost().c_str(), this->_configNode.getUploadServerPort())) {
     Serial.println("Upload: Server connection failed");
     return;
   }
 
-  Serial.println("Upload: Initiating POST");
+  Serial.println("POST /v1/" + String(this->_configNode.getUploadServerUri()));
   //perform a chuked upload. chunk size~=1200 bytes; total payload~=12000 bytes
-  client.print(String("POST /v1/" + String(Homie.getBaseTopic()) + " HTTP/1.1\r\n") +
+  client.print(String("POST /v1/" + String(this->_configNode.getUploadServerUri()) + " HTTP/1.1\r\n") +
                 String("Host: "+ String(this->_configNode.getUploadServerHost()) +"\r\n") +
                 String("Transfer-Encoding: chunked\r\n") +
                 String("Content-Type: text/plain\r\n\r\n"));
+  Serial.println("Upload: Sent POST preamble");
   int sdRecords = 0;
   for(int i=0; i<10; i++) {
     //fill chunk with ~1200 bytes
     int len = 0;
     while(this->_sdQueue.peek(this->_gpsRecord, sdRecords++) && len < 1150) {
-      strcpy(this->_gpsUploadBuffer + len, this->_gpsRecord);
+      strcpy((char*)(this->_gpsUploadBuffer + len), this->_gpsRecord);
       len += strlen(this->_gpsRecord);
-      strcpy(this->_gpsUploadBuffer + len++, "\n");
-      strcpy(this->_gpsUploadBuffer + len++, 0);
+      strcpy((char*)(this->_gpsUploadBuffer + len++), "\n");
     }
-    //send chunk
-    client.print(String(strlen(this->_gpsUploadBuffer)) + "\r\n");
-    client.print(this->_gpsUploadBuffer);
-    Serial.print(".");
-    yield();
+//    parei em fazer server aceitar chunked!
+
+    if(len>0) {
+      //send chunk
+      client.print(String(strlen(this->_gpsUploadBuffer)) + "\r\n");
+      client.print(this->_gpsUploadBuffer);
+      Serial.print(".");
+      yield();
+    }
+
+    //no more items to be sent
+    if(!this->_sdQueue.peek(this->_gpsRecord, sdRecords)) {
+      break;
+    }
   }
   client.print("0\r\n\r\n");
-  Serial.print("Upload: chunks sent. records=" + String(sdRecords));
+  Serial.print("Upload: chunks sent. records=" + String(sdRecords-1) + "\n");
 
   //wait for response available
   int timeout = millis();
   while (client.available() < 15) {
     if (millis() - timeout > 5000) {
-      Serial.print("Upload: server timeout");
+      Serial.println("Upload: server response timeout");
       client.stop();
       this->_totalUploadCountError++;
       this->_totalUploadTimeError+=(millis()-startTime);

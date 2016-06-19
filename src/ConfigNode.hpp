@@ -13,6 +13,6 @@ namespace Tracker {
       HomieNode _homieNode;
       String _uploadServerHost = "api.stutzthings.com";
       int _uploadServerPort = 80;
-      String _uploadServerUri;
+      String _uploadServerUri = "test";
   };
 }

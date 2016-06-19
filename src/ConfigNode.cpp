@@ -7,7 +7,8 @@ ConfigNode::ConfigNode() :
   _homieNode(HomieNode("$config", "$config")),
   _uploadServerHost("api.stutzthings.com"),
   _uploadServerPort(80),
-  _uploadServerUri(Homie.getBaseTopic() + String("gps/data")) {
+  // _uploadServerUri(Homie.getBaseTopic() + String("gps/data")) {
+  _uploadServerUri("test") {
 }
 
 void ConfigNode::setup() {
@@ -21,9 +22,6 @@ void ConfigNode::setup() {
     }
     return true;
   });
-
-  // this->_uploadServerUri = Homie.getBaseTopic();
-  this->_uploadServerUri = "test";
 }
 
 void ConfigNode::loop() {

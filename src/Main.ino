@@ -29,9 +29,11 @@ void loop() {
 }
 
 void setupHandler() {
+  configNode.setup();
   gpsNode.setup();
 }
 
 void loopHandler() {
+  configNode.loop();
   gpsNode.loop();
 }
