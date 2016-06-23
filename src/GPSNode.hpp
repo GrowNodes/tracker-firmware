@@ -18,7 +18,7 @@ namespace Tracker {
       char _gpsUploadBuffer[1300];
       void _sendNextGpsData();
       void _reportMetrics();
-      void _readGpsRecord(const char* prefix, char* gpsRecord);
+      bool _readGpsRecord(const char* prefix, char* gpsRecord);
       bool _validateNmeaChecksum(char* gpsRecord);
       int _fromHex(char a);
       HomieNode _homieNode;
@@ -30,5 +30,6 @@ namespace Tracker {
       int _totalUploadTimeSuccess = 0;
       int _totalUploadCountError = 0;
       int _totalUploadTimeError = 0;
+      int _totalRecordsPendingUpload = 0;
   };
 }

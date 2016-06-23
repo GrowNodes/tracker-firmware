@@ -21,6 +21,7 @@ namespace Tracker {
       CircularQueueMeta _meta;
       CircularQueueBuffer _buffer;
       String _name;
+      String _nameMeta;
       char* _tmprecord;
       int _maxFileSize;
       void _writeMetaFile();

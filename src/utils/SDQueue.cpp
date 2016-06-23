@@ -5,6 +5,7 @@ using namespace Tracker;
 
 SDQueue::SDQueue(String name, int maxQueueSize, int recordBytes, int bufferRecords) :
   _name(name),
+  _nameMeta(name + ".m"),
   _meta(maxQueueSize),
   _buffer(bufferRecords, recordBytes),
   _maxFileSize(maxQueueSize*recordBytes) {
@@ -56,6 +57,7 @@ bool SDQueue::peek(char* record, int n) {
   if(this->_meta.peek(n)!=-1) {
     File _file = SD.open(this->_name, FILE_READ);
     int pos = this->_meta.peek(n) * this->_buffer.getBufferElementSize();
+    _file.seek(pos);
     _file.readBytes(record, this->_buffer.getBufferElementSize());
     _file.close();
     return true;
@@ -65,30 +67,39 @@ bool SDQueue::peek(char* record, int n) {
 }
 
 void SDQueue::_writeMetaFile() {
-  File _file = SD.open(this->_name + ".meta", FILE_WRITE);
-  _file.seek(0);
-  _file.print(this->_meta.getCount());
-  _file.print(this->_meta.getHead());
-  _file.print(this->_meta.getSize());
-  _file.print(this->_meta.getTail());
-  _file.close();
-  Serial.println("Queue metadata saved to disk");
+  File _file = SD.open(this->_nameMeta, FILE_WRITE);
+  if(_file) {
+    _file.seek(0);
+    _file.print(this->_meta.getCount());
+    _file.print(this->_meta.getHead());
+    _file.print(this->_meta.getSize());
+    _file.print(this->_meta.getTail());
+    _file.close();
+    Serial.println("Queue metadata saved to disk");
+    Serial.printf("   count: %d", this->_meta.getCount());
+    Serial.printf("   size: %d\n", this->_meta.getSize());
+    Serial.printf("   head: %d", this->_meta.getHead());
+    Serial.printf("   tail: %d", this->_meta.getTail());
+  } else {
+    Serial.println("Could not open metadata file for writing");
+  }
 }
 void SDQueue::_loadMetaFile() {
-  File _file = SD.open(this->_name + ".meta", FILE_READ);
+  File _file = SD.open(this->_nameMeta, FILE_READ);
   if(_file) {
     _file.seek(0);
     int count = _file.parseInt();
     int head = _file.parseInt();
     int size = _file.parseInt();
     int tail = _file.parseInt();
-    this->_meta.initialize(size, count, head, tail);
+    // this->_meta.initialize(size, count, head, tail);
+    PAREI AQUI ARRUMANDO LOAD DE METADATA
     _file.close();
     Serial.println("Metadata loaded from disk");
     Serial.printf("   count: %d", count);
+    Serial.printf("   size: %d\n", size);
     Serial.printf("   head: %d", head);
     Serial.printf("   tail: %d", tail);
-    Serial.printf("   size: %d\n", size);
   } else {
     Serial.println("Metadata file doesn't exist yet");
   }
@@ -104,7 +115,7 @@ void SDQueue::flush() {
       Serial.printf("Opened file for flushing buffer. buffer records=%d\n", this->_buffer.getCount());
       bool atLeastOne = false;
       while(!this->_buffer.isEmpty()) {
-        Serial.println("Next buffer element flush");
+        Serial.println("Buffer element flush");
         atLeastOne = true;
         this->_buffer.poll(this->_tmprecord);
         int pos = this->_meta.push() * this->_buffer.getBufferElementSize();
@@ -124,13 +135,13 @@ void SDQueue::flush() {
         _file.write(this->_tmprecord, this->_buffer.getBufferElementSize());
         _file.write("\n");
       }
+      _file.close();
       if(atLeastOne) {
         this->_writeMetaFile();
         this->_buffer.empty();
         Serial.println("Buffer flushed to disk");
       }
     }
-    _file.close();
   } else {
     // Serial.println("Buffer is empty. Skipping flush()");
   }

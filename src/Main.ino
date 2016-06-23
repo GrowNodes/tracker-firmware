@@ -20,20 +20,20 @@ void setup() {
   Homie.enableLogging(true);
 
   Homie.setup();
+  gpsNode.setup();
 
   Serial.println("Stutz Tracker initiated");
 }
 
 void loop() {
   Homie.loop();
+  gpsNode.loop();
 }
 
 void setupHandler() {
   configNode.setup();
-  gpsNode.setup();
 }
 
 void loopHandler() {
   configNode.loop();
-  gpsNode.loop();
 }
