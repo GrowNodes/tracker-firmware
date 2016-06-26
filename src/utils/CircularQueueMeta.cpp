@@ -55,11 +55,26 @@ void CircularQueueMeta::removeElements(int n) {
   }
 }
 
-void CircularQueueMeta::initialize(int size, int count, int head, int tail) {
-  this->_size = size;
-  this->_count = size;
-  this->_head = head;
-  this->_tail = tail;
+bool CircularQueueMeta::initialize(int size, int count, int tail, int head) {
+  bool valid = false;
+  if(count <= size) {
+    if(head == tail) {
+      valid = (count==0) || (count==size);
+    } else if(head > tail) {
+      valid = (count==(head-tail));
+    } else if(head < tail) {
+      valid = (count==((size-tail+1)+(head-1)));
+    }
+  }
+  if(valid) {
+    this->_size = size;
+    this->_count = count;
+    this->_head = head;
+    this->_tail = tail;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 

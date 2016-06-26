@@ -173,6 +173,37 @@ void testQueueMeta() {
     Serial.println("26 should be empty");return;
   }
 
+  if(!m.initialize(5, 1, 0, 1)) {
+    Serial.println("27a should be valid");return;
+  }
+  if(m.isEmpty()) {
+    Serial.println("27b should not be empty");return;
+  }
+
+  if(!m.initialize(5, 5, 0, 0)) {
+    Serial.println("28a should be valid");return;
+  }
+  if(!m.isFull()) {
+    Serial.println("28b should be full");return;
+  }
+
+  if(!m.initialize(5, 3, 0, 3)) {
+    Serial.println("29 should be valid");return;
+  }
+
+  if(m.initialize(3, 4, 0, 3)) {
+    Serial.println("30 should be invalid");return;
+  }
+  if(m.initialize(3, 2, 9, 10)) {
+    Serial.println("31 should be invalid");return;
+  }
+  if(m.initialize(30, 20, 9, 30)) {
+    Serial.println("32 should be valid");return;
+  }
+  if(!m.initialize(30, 10, 25, 5)) {
+    Serial.println("33 should be valid");return;
+  }
+
   Serial.println("QUEUE META: ALL TESTS OK!");
 
 }

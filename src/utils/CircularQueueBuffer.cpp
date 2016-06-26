@@ -19,6 +19,7 @@ void CircularQueueBuffer::empty() {
 }
 
 void CircularQueueBuffer::push(const char* bufferElement) {
+  // memset((char*)(bufferElement+this->_bufferElementSize-1), 0, 1);
   int pos = this->_meta.push();
   char* b = this->_buffer + pos*this->_bufferElementSize;
   strncpy(b, (char*)bufferElement, this->_bufferElementSize);
