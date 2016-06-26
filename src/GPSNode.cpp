@@ -22,13 +22,11 @@ const char* GPS_RMC = "$GPRMC";
 const char CHAR_SPACE = ' ';
 
 //String name, int maxQueueSize, int recordBytes, int bufferRecords
-GPSNode::GPSNode(ConfigNode configNode) :
+GPSNode::GPSNode() :
+  _homieNode(HomieNode("gps", "gps")),
   _sdQueue(SDQueue("gps-data", GPS_STORAGE_MAX_RECORDS, GPS_RECORD_LENGTH, GPS_STORAGE_BUFFER_SIZE)),
   _gpsTimer(HomieInternals::Timer()),
-  _metricsTimer(HomieInternals::Timer()),
-  _homieNode(HomieNode("gps", "gps")),
-  _configNode(configNode),
-  _gpsRecord() {
+  _metricsTimer(HomieInternals::Timer()) {
     this->_gpsRecord = (char*)malloc(GPS_RECORD_LENGTH);
     this->_gpsUploadBuffer = (char*)malloc(UPLOAD_BUFFER_LENGTH);
 }
@@ -39,10 +37,11 @@ GPSNode::~GPSNode() {
 }
 
 void GPSNode::setup() {
+  this->_uploadServerUri = Homie.getBaseTopic() + String(Homie.getId()) + String("/gps/data");
+  // this->_uploadServerUri = "test";
   this->_sdQueue.setup();
   this->_gpsTimer.setInterval(500, true);
   this->_metricsTimer.setInterval(60000, true);
-  HomieNode h = this->_homieNode;
 }
 
 void GPSNode::loop() {
@@ -50,7 +49,7 @@ void GPSNode::loop() {
 
   //upload gps data to cloud
   if(Homie.isReadyToOperate()) {
-    if(this->_sdQueue.getCount() > 200) {
+    if(this->_sdQueue.getCount() > 900) {
       this->_sendNextGpsData();
     }
 
@@ -113,13 +112,13 @@ void GPSNode::_sendNextGpsData() {
   //connect to server and send various POST on the same connection
   WiFiClient client;
   // Serial.printf("Host=%s:%d\n", this->_configNode.getUploadServerHost().c_str(), this->_configNode.getUploadServerPort());
-  if (!client.connect(this->_configNode.getUploadServerHost().c_str(), this->_configNode.getUploadServerPort())) {
+  if (!client.connect(this->_uploadServerHost.c_str(), this->_uploadServerPort)) {
     Serial.println("Upload: server connection failed");
     return;
   }
 
   //send
-  for(int i=0; i<400; i++) {
+  for(int i=0; i<50; i++) {
     // int len = 0;
     int sdRecordsCount = 0;
     int sdRecordsOK = 0;
@@ -143,11 +142,11 @@ void GPSNode::_sendNextGpsData() {
     if(strlen(this->_gpsUploadBuffer)>0) {
       Serial.printf("Upload: ok=%d err=%d\n", sdRecordsOK, sdRecordsError);
 
-      // Serial.println("POST /v1/" + String(this->_configNode.getUploadServerUri()));
+      Serial.println("POST /" + String(this->_uploadServerUri));
       int startTime = millis();
-      client.printf("POST /v1/%s HTTP/1.1\r\nHost: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
-                      this->_configNode.getUploadServerUri().c_str(),
-                      this->_configNode.getUploadServerHost().c_str(),
+      client.printf("POST /%s HTTP/1.1\r\nHost: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
+                      this->_uploadServerUri.c_str(),
+                      this->_uploadServerHost.c_str(),
                       strlen(this->_gpsUploadBuffer)
       );
       client.print(this->_gpsUploadBuffer);
@@ -171,8 +170,8 @@ void GPSNode::_sendNextGpsData() {
       bool success = false;
       if(client.readStringUntil(CHAR_SPACE).length()>0) {
         String code = client.readStringUntil(CHAR_SPACE);
-        if(code == "200") {
-          Serial.println("Upload: 200 OK");
+        if(code == "201") {
+          Serial.println("Upload: 201 Created");
           success = true;
           this->_totalUploadCountSuccess++;
           this->_totalUploadTimeSuccess+=(millis()-startTime);
@@ -180,12 +179,6 @@ void GPSNode::_sendNextGpsData() {
           this->_totalUploadRecordCRCError+=sdRecordsError;
           this->_sdQueue.removeElements(sdRecordsCount);
           // Serial.println("Upload: sent records removed from disk");
-          //drain response data
-          // Serial.println("RESPONSE DRAIN0");
-          while(client.available()>0) {
-            client.read();
-          }
-          // Serial.println("RESPONSE DRAIN1");
         } else {
           this->_totalUploadCountError++;
           this->_totalUploadTimeError+=(millis()-startTime);
@@ -196,6 +189,12 @@ void GPSNode::_sendNextGpsData() {
         this->_totalUploadTimeError+=(millis()-startTime);
         Serial.println("Upload: invalid server response");
       }
+      //drain response data
+      // Serial.println("RESPONSE DRAIN0");
+      while(client.available()>0) {
+        client.read();
+      }
+      // Serial.println("RESPONSE DRAIN1");
       // Serial.println("Upload: post finished");
 
     } else {
@@ -224,7 +223,6 @@ void GPSNode::_reportMetrics() {
   Homie.setNodeProperty(this->_homieNode, "totalRecordsReadSuccess", String(this->_totalRecordsReadSuccess));
   Homie.setNodeProperty(this->_homieNode, "totalRecordsReadError", String(this->_totalRecordsReadError));
   Homie.setNodeProperty(this->_homieNode, "totalRecordsPendingUpload", String(this->_totalRecordsPendingUpload));
-  Homie.setNodeProperty(this->_homieNode, "bootCount", String(this->_bootCount));
 }
 
 bool GPSNode::_readGpsRecord(const char* prefix, char* gpsRecord) {
@@ -243,10 +241,6 @@ bool GPSNode::_readGpsRecord(const char* prefix, char* gpsRecord) {
   } while(!valid && t++<4);
 
   return valid;
-}
-
-void GPSNode::setBootCount(int bootCount) {
-  this->_bootCount = bootCount;
 }
 
 // this takes a nmea gps string, and validates it againts the checksum

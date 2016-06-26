@@ -6,19 +6,17 @@
 
 using namespace Tracker;
 
-ConfigNode configNode;
-GPSNode gpsNode = GPSNode(configNode);
-
-SDData bootCounter = SDData("reboot");
+GPSNode gpsNode;
 
 void setup() {
   Serial.begin(9600);
 
-  int bootCount = bootCounter.getIntValue() + 1;
-  bootCounter.setup();
-  bootCounter.setIntValue(bootCount);
-  gpsNode.setBootCount(bootCount);
-  Serial.printf("BOOT COUNTER: %d\n", bootCount);
+  // SDData bootCounter = SDData("boot");
+  // int bootCount = bootCounter.getIntValue() + 1;
+  // bootCounter.setup();
+  // bootCounter.setIntValue(bootCount);
+  // configNode.setBootCount(bootCount);
+  // Serial.printf("BOOT COUNTER: %d\n", bootCount);
 
   Homie_setFirmware("stutz-tracker", "1.0.0");
   Homie_setBrand("StutzTracker");
@@ -40,9 +38,9 @@ void loop() {
 }
 
 void setupHandler() {
-  configNode.setup();
+  // configNode.setup();
 }
 
 void loopHandler() {
-  configNode.loop();
+  // configNode.loop();
 }

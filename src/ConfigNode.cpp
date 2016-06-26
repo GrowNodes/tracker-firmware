@@ -4,14 +4,11 @@ using namespace Tracker;
 
 //String name, int maxQueueSize, int recordBytes, int bufferRecords
 ConfigNode::ConfigNode() :
-  _homieNode(HomieNode("$config", "$config")),
-  _uploadServerHost("api.stutzthings.com"),
-  _uploadServerPort(80),
-  // _uploadServerUri(Homie.getBaseTopic() + String("gps/data")) {
-  _uploadServerUri("test") {
+  _homieNode(HomieNode("$config", "$config")) {
 }
 
 void ConfigNode::setup() {
+  // this->_homieNode = HomieNode("$config", "$config");
   HomieNode h = this->_homieNode;
   h.subscribe("factoryReset", [h](String value) {
     if(value == "true") {
@@ -22,19 +19,14 @@ void ConfigNode::setup() {
     }
     return true;
   });
+  // Serial.println("CONFIG NODE SETUP()");
+  // Serial.println(this->_uploadServerUri);
 }
 
 void ConfigNode::loop() {
+  // Homie.setNodeProperty(this->_homieNode, "bootCount", String(this->_bootCount));
 }
 
-String ConfigNode::getUploadServerHost() {
-  return this->_uploadServerHost;
-}
-
-int ConfigNode::getUploadServerPort() {
-  return this->_uploadServerPort;
-}
-
-String ConfigNode::getUploadServerUri() {
-  return this->_uploadServerUri;
-}
+// void ConfigNode::setBootCount(int bootCount) {
+//   this->_bootCount = bootCount;
+// }
