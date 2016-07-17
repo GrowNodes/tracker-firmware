@@ -1,5 +1,5 @@
-#include "CircularQueueBuffer.hpp"
 #include <Arduino.h>
+#include "CircularQueueBuffer.hpp"
 
 namespace Tracker {
   class SDQueue {

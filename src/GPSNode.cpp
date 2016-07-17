@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266HttpClient.h>
 #include "GPSNode.hpp"
@@ -49,7 +50,7 @@ void GPSNode::loop() {
 
   //upload gps data to cloud
   if(Homie.isReadyToOperate()) {
-    if(this->_sdQueue.getCount() > 900) {
+    if(this->_sdQueue.getCount() > 90000) {
       this->_sendNextGpsData();
     }
 
@@ -118,7 +119,7 @@ void GPSNode::_sendNextGpsData() {
   }
 
   //send
-  for(int i=0; i<50; i++) {
+  for(int i=0; i<100; i++) {
     // int len = 0;
     int sdRecordsCount = 0;
     int sdRecordsOK = 0;
@@ -205,6 +206,7 @@ void GPSNode::_sendNextGpsData() {
       }
       break;
     }
+    yield();
     // Serial.println("FINISHED POST");
   }
 
