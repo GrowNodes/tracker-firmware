@@ -4,3 +4,6 @@
 [submodule "lib/ESPAsyncTCP"]
 	path = lib/ESPAsyncTCP
 	url = https://github.com/me-no-dev/ESPAsyncTCP.git
+[submodule "lib/homie-esp8266"]
+	path = lib/homie-esp8266
+	url = https://github.com/stutzlab/homie-esp8266.git
