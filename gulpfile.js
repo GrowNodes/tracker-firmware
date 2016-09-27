@@ -26,5 +26,5 @@ gulp.task('uglify', function() {
   return gulp.src('src/captive/ui.js')
         .pipe(uglify())
         .pipe(rename({ suffix: '.min' }))
-        .pipe(gulp.dest('src/captive/dist'));
+        .pipe(gulp.dest('src/captive'));
 });
