@@ -1,1 +1,0 @@
-function submitWIFIInfo(){var e={};e.network=document.getElementById("wifi_name").value,e.password=document.getElementById("wifi_password").value,nanoajax.ajax({url:"/wifi",method:"POST",headers:{"Content-Type":"application/json"},body:e},function(n,o,a){e&&200==n&&console.log(n)})}

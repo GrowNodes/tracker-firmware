@@ -10,19 +10,21 @@ var inlinesource = require('gulp-inline-source');
 //   console.log("File " + event.path + " was " + event.type + ", running tasks...");
 // });
 
-gulp.task("default", ["uglify", "prepare"], function() {
+gulp.task("default", ["prepare"], function() {
   console.log("Build Finished");
 });
 
-gulp.task('uglify', function() {
-  return gulp.src('src/captive/ui.js')
-        .pipe(uglify())
-        .pipe(gulp.dest('src/captive/dist'));
-});
-gulp.task('prepare', function () {
+gulp.task('prepare', ["uglify"], function () {
     return gulp.src('src/captive/index.html')
         .pipe(inlinesource())
         .pipe(gzip({gzipOptions:{level:9}, extension:'gz', append:true}))
         .pipe(rename("bundle_ui.gz"))
         .pipe(gulp.dest('data/homie'));
+});
+
+gulp.task('uglify', function() {
+  return gulp.src('src/captive/ui.js')
+        .pipe(uglify())
+        .pipe(rename({ suffix: '.min' }))
+        .pipe(gulp.dest('src/captive/dist'));
 });
