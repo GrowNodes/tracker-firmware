@@ -1,6 +1,7 @@
 
 var gulp  = require('gulp');
 var uglify = require('gulp-uglify');
+var cleanCSS = require('gulp-clean-css');
 var gzip  = require('gulp-gzip');
 var rename  = require('gulp-rename');
 var inlinesource = require('gulp-inline-source');
@@ -14,7 +15,7 @@ gulp.task("default", ["prepare"], function() {
   console.log("Build Finished");
 });
 
-gulp.task('prepare', ["uglify"], function () {
+gulp.task('prepare', ["uglify", "minify-css"], function () {
     return gulp.src('src/captive/index.html')
         .pipe(inlinesource())
         .pipe(gzip({gzipOptions:{level:9}, extension:'gz', append:true}))
@@ -22,7 +23,14 @@ gulp.task('prepare', ["uglify"], function () {
         .pipe(gulp.dest('data/homie'));
 });
 
-gulp.task('uglify', function() {
+gulp.task('minify-css', function() {
+  return gulp.src('src/captive/ui.css')
+    .pipe(cleanCSS())
+    .pipe(rename({ suffix: '.min' }))
+    .pipe(gulp.dest('src/captive'));
+});
+
+gulp.task('uglify',  function() {
   return gulp.src('src/captive/ui.js')
         .pipe(uglify())
         .pipe(rename({ suffix: '.min' }))
