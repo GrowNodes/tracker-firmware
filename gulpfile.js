@@ -1,5 +1,6 @@
 
 var gulp  = require('gulp');
+var uglify = require('gulp-uglify');
 var gzip  = require('gulp-gzip');
 var rename  = require('gulp-rename');
 var inlinesource = require('gulp-inline-source');
@@ -9,10 +10,15 @@ var inlinesource = require('gulp-inline-source');
 //   console.log("File " + event.path + " was " + event.type + ", running tasks...");
 // });
 
-gulp.task("default", ["prepare"], function() {
+gulp.task("default", ["uglify", "prepare"], function() {
   console.log("Build Finished");
 });
 
+gulp.task('uglify', function() {
+  return gulp.src('src/captive/ui.js')
+        .pipe(uglify())
+        .pipe(gulp.dest('src/captive/dist'));
+});
 gulp.task('prepare', function () {
     return gulp.src('src/captive/index.html')
         .pipe(inlinesource())
