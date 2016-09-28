@@ -13,7 +13,7 @@
 //4k - 1850ms (10 x 400) -> 2kB/s
 //6k - 1900ms (10 x 600) -> 3kB/s
 //12k - 1980ms (10 x 1200) -> 6kB/s <- optimal chunk size (1200 bytes)
-//24k - 3970ms (10 x 2400) -> 6kB/s <- stagnado
+//24k - 3970ms (10 x 2400) -> 6kB/s <- estagnado
 //36k - 6600 (30 x 1200) -> 5.4kB/s
 
 using namespace Tracker;
@@ -38,7 +38,7 @@ GPSNode::~GPSNode() {
 }
 
 void GPSNode::setup() {
-  this->_uploadServerUri = Homie.getBaseTopic() + String(Homie.getId()) + String("/gps/data");
+  this->_uploadServerUri = Homie.getBaseTopic() + String(Homie.getId()) + String("/gps/raw");
   // this->_uploadServerUri = "test";
   this->_sdQueue.setup();
   this->_gpsTimer.setInterval(500, true);
