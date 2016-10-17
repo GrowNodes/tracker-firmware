@@ -27,29 +27,46 @@
         </p>
       </div>
 
-      <h2>Passo 1: Dados de acesso à rede Wi-Fi para conexão à Internet</h2>
-      <div>Selecione a qual das redes Wi-Fi da lista a seguir deseja conectar o dispositivo:</div>
-      <div>
-        <select id="wifi_name" name="wifi_name">
-          <option value="none">Selecione a rede wi-fi</option>
-        </select>
-      </div>
-      <div>Digite a senha da rede Wi-Fi escolhida:</div>
-      <div>
-        <input id="wifi_password" type="password" name="wifi_password"></input>
-      </div>
+      <section class="config_step" id="step_wifi_connect">
 
-      <h2>Passo 2: Vinculando o dispositvo a um aplicativo</h2>
-      <div>Selecione a qual dos aplicativos deseja vincular o dispositivo:</div>
-      <div>
-        <select id="app_name" name="app_name">
-          <option value="none">Selecione a rede wi-fi</option>
-        </select>
-      </div>
-      <div>Digite a senha da rede Wi-Fi escolhida:</div>
-      <div>
-        <input id="wifi_password" type="password" name="wifi_password"></input>
-      </div>
+        <h2>Passo 1: Dados de acesso à rede Wi-Fi para conexão à Internet</h2>
+        <div>Selecione a qual das redes Wi-Fi da lista a seguir deseja conectar o dispositivo:</div>
+        <div>
+          <ul id="wifi_list">
+            <li></li>
+          </ul>
+          <input type='hidden' id="wifi_name" name="wifi_name" />
+        </div>
+        <div>Digite a senha da rede Wi-Fi escolhida:</div>
+        <div>
+          <input id="wifi_password" type="password" name="wifi_password"></input>
+        </div>
+        <div>
+          <input type="button" name="wifi_connect_action" value="Conectar" onclick="connectToSelectedWiFi()">
+        </div>
+      </section>
+
+      <section class="config_step" id="step_device_enroll">
+
+        <h2>Passo 2: Vinculando o dispositvo a um aplicativo</h2>
+        <div>Nome de usuário da sua conta em <strong>stutzthings.com</strong>:</div>
+        <div>
+            <input id="stutzthings_account_id" type="text" name="stutzthings_account_id" value="">
+        </div>
+        <div>Senha da sua conta em <strong>stutzthings.com</strong>:</div>
+        <div>
+          <input id="stutzthings_password" type="password" name="stutzthings_password"></input>
+        </div>
+        <div>
+          <input type="button" name="device_enrollment_action" value="Registrar dispositivo" onclick="enrollDeviceToStutzThingsAccount()">
+        </div>
+
+      </section>
+
+      <section class="config_step" id="step_final">
+        <h2>Passo 3: Gravando configurações no dispositivo</h2>
+      </section>
+
     </div>
   </body>
 </html>

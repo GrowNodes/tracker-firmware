@@ -3,5 +3,8 @@
   color: #AAA;
 }
 .messages-area {
-  
+
+}
+section.config_step {
+  display: none;
 }
