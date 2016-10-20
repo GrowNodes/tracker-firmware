@@ -14,6 +14,14 @@ var wifiConnectionCheckAttempts = 0;
 
 var WIFI_STATUS_CONNECTED = 'CONNECTED';
 
+//Dynamic DOM elements
+var ui_wifi_password_input_group = document.createElement('div');
+ui_wifi_password_input_group.innerHTML = '<input id="wifi_password" type="password" name="wifi_password" placeholder="digite a senha do Wi-Fi"></input>';
+
+var ui_wifi_connect_button_group = document.createElement('div');
+ui_wifi_connect_button_group.innerHTML = '<input type="button" name="wifi_connect_action" value="Conectar" onclick="connectToSelectedWiFi()">';
+
+
 function showAvailableNetworks() {
   showInfoMessage('Buscando por redes Wi-Fi para iniciar o processo de configuração do dispositivo na Internet...', 'Procurando redes Wi-Fi disponíveis');
   nanoajax.ajax({url: '/networks', method: 'GET', headers:{'Content-Type': 'application/json'}}, function (code, responseText, request) {
@@ -23,6 +31,7 @@ function showAvailableNetworks() {
 
       // show wi-fi networks list
       var wifiListElement = el('wifi_list');
+      wifiListElement.appendChild(ui_createWiFiNetworkDOMElement('li'));
 
     }else if (code===503) {
       showErrorMessage('Erro ao listar redes Wi-Fi disponíveis. Detalhes: ' + responseJSON.error, 'Erro ao listar redes Wi-Fi disponiveis');
@@ -31,6 +40,22 @@ function showAvailableNetworks() {
       showErrorMessage('Houve um erro inesperado ao conectar listar as redes Wi-Fi disponíveis. Detalhes: ' + responseJSON.error, 'Erro ao listar redes Wi-Fi disponiveis');
     }
   });
+}
+
+function ui_selectWiFiNetwork(ssid) {
+  el('wifi_name').value = ssid;
+  
+  //reset the style of the current selected element and set the style in the new element
+  //open the password box right below the selected network
+}
+function ui_createWiFiNetworkDOMElement(ssid, rssi, encryption) {
+  var li = document.createElement('li');
+  li.setAttribute('data-network-name', ssid);
+  li.innerHTML = '<em>' + ssid + '</em>' + '<button onclick="ui_selectWiFiNetwork(\'' + ssid + '\')">selecionar</button>';
+  li.onclick = function() {
+    ui_selectWiFiNetwork(ssid);
+  };
+  return el;
 }
 
 function connectToSelectedWiFi() {
