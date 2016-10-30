@@ -23,8 +23,7 @@ void setup() {
   Homie.setLoopFunction(loopHandler);
   Homie.setSetupFunction(setupHandler);
 
-  Homie.enableBuiltInLedIndicator(false);
-  Homie.enableLogging(true);
+  Homie.disableLedFeedback();
 
   Homie.setup();
   gpsNode.setup();
