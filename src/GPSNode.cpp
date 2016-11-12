@@ -30,6 +30,7 @@ GPSNode::GPSNode() :
   _metricsTimer(HomieInternals::Timer()) {
     this->_gpsRecord = (char*)malloc(GPS_RECORD_LENGTH);
     this->_gpsUploadBuffer = (char*)malloc(UPLOAD_BUFFER_LENGTH);
+    Serial.setTimeout(200);//~2 nmea messages at 9600bps
 }
 
 GPSNode::~GPSNode() {
@@ -38,9 +39,12 @@ GPSNode::~GPSNode() {
 }
 
 void GPSNode::setup() {
+  Serial.println("1");
   this->_uploadServerUri = Homie.getConfiguration().mqtt.baseTopic + String(Homie.getConfiguration().deviceId) + String("/gps/raw");
   // this->_uploadServerUri = "test";
+  Serial.println("2");
   this->_sdQueue.setup();
+  Serial.println("3");
   this->_gpsTimer.setInterval(500, true);
   this->_metricsTimer.setInterval(60000, true);
 }
@@ -232,7 +236,9 @@ bool GPSNode::_readGpsRecord(const char* prefix, char* gpsRecord) {
   bool valid = false;
   do {
     Serial.find(prefix);
+    // Serial.println("GPS READ UNTIL1");
     String tmp = Serial.readStringUntil('\n');
+    // Serial.println("GPS READ UNTIL2");
     strcpy(gpsRecord, prefix);
     //truncate readings
     memcpy(gpsRecord+strlen(prefix), tmp.c_str(), GPS_RECORD_LENGTH-strlen(prefix));
@@ -240,7 +246,7 @@ bool GPSNode::_readGpsRecord(const char* prefix, char* gpsRecord) {
     memset(gpsRecord+GPS_RECORD_LENGTH-1, 0, 1);
     valid = _validateNmeaChecksum(gpsRecord);
     yield();
-  } while(!valid && t++<4);
+  } while(!valid && t++<2);//4
 
   return valid;
 }

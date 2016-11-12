@@ -2,14 +2,18 @@
 
 #include <Homie.h>
 #include "GPSNode.hpp"
+#include "Watchdog.hpp"
 #include "utils/SDData.hpp"
 
 using namespace Tracker;
 
 GPSNode gpsNode;
+Watchdog watchdog;
 
 void setup() {
   Serial.begin(9600);
+  Serial.println("Stutz Tracker initialization");
+  watchdog.setup();
 
   // SDData bootCounter = SDData("boot");
   // int bootCount = bootCounter.getIntValue() + 1;
@@ -18,21 +22,31 @@ void setup() {
   // configNode.setBootCount(bootCount);
   // Serial.printf("BOOT COUNTER: %d\n", bootCount);
 
+  Serial.println("");
+  Serial.println("--Initializing Homie");
   Homie_setFirmware("stutz-tracker", "1.0.0");
   Homie_setBrand("StutzTracker");
   Homie.setLoopFunction(loopHandler);
   Homie.setSetupFunction(setupHandler);
-
   Homie.disableLedFeedback();
-
+  watchdog.ping();
   Homie.setup();
-  gpsNode.setup();
+  watchdog.ping();
 
-  Serial.println("Stutz Tracker initiated");
+  Serial.println("");
+  Serial.println("--Initializing GPS");
+  watchdog.ping();
+  gpsNode.setup();
+  watchdog.ping();
+
+  Serial.println("");
+  Serial.println("--Starting operational loop");
 }
 
 void loop() {
+  watchdog.loop();
   Homie.loop();
+  watchdog.loop();
   gpsNode.loop();
 }
 
