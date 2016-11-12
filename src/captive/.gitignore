@@ -1,2 +1,4 @@
 node_modules
 .tmp
+ui.min.js
+ui.min.css

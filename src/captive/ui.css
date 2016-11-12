@@ -1,5 +1,10 @@
-.container {
-  max-width: 600px;
-  box-sizing: border-box;
-  padding: 10px;
+.details {
+  font-size: 1rem;
+  color: #AAA;
+}
+.messages-area {
+
+}
+section.config_step {
+  display: none;
 }
