@@ -89,6 +89,7 @@ void SDQueue::_writeMetaFile() {
     Serial.println("Could not open metadata file for writing");
   }
 }
+
 void SDQueue::_loadMetaFile() {
   File _file = SD.open(this->_nameMeta, FILE_READ);
   if(_file) {
@@ -98,7 +99,7 @@ void SDQueue::_loadMetaFile() {
     int tail = _file.parseInt();
     int head = _file.parseInt();
     if(this->_meta.initialize(size, count, tail, head)) {
-      Serial.println("Metadata loaded from disk valid");
+      Serial.println("Metadata loaded from disk successfuly");
       // Serial.printf("   size: %d", size);
       // Serial.printf("   count: %d", count);
       // Serial.printf("   tail: %d", tail);

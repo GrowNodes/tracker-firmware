@@ -3,7 +3,6 @@
 #include <Homie.h>
 #include "GPSNode.hpp"
 #include "Watchdog.hpp"
-#include "utils/SDData.hpp"
 
 using namespace Tracker;
 
@@ -13,15 +12,11 @@ Watchdog watchdog;
 void setup() {
   Serial.begin(9600);
   Serial.println("Stutz Tracker initialization");
+
+  //initialize watchdog module
   watchdog.setup();
 
-  // SDData bootCounter = SDData("boot");
-  // int bootCount = bootCounter.getIntValue() + 1;
-  // bootCounter.setup();
-  // bootCounter.setIntValue(bootCount);
-  // configNode.setBootCount(bootCount);
-  // Serial.printf("BOOT COUNTER: %d\n", bootCount);
-
+  //initialize Homie
   Serial.println("");
   Serial.println("--Initializing Homie");
   Homie_setFirmware("stutz-tracker", "1.0.0");
@@ -33,6 +28,7 @@ void setup() {
   Homie.setup();
   watchdog.ping();
 
+  //initialize GPS module
   Serial.println("");
   Serial.println("--Initializing GPS");
   watchdog.ping();

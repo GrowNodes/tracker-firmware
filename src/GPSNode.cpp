@@ -25,12 +25,16 @@ const char CHAR_SPACE = ' ';
 //String name, int maxQueueSize, int recordBytes, int bufferRecords
 GPSNode::GPSNode() :
   _homieNode(HomieNode("gps", "gps")),
+  _uploadServerHost(HomieSetting<const char*>("uploadServerHost", "Host to receive POST with bulk GPS positions")),
+  _uploadServerPort(HomieSetting<long>("uploadServerPort", "Port for the POST of bulk GPS position")),
   _sdQueue(SDQueue("gps-data", GPS_STORAGE_MAX_RECORDS, GPS_RECORD_LENGTH, GPS_STORAGE_BUFFER_SIZE)),
   _gpsTimer(HomieInternals::Timer()),
   _metricsTimer(HomieInternals::Timer()) {
     this->_gpsRecord = (char*)malloc(GPS_RECORD_LENGTH);
     this->_gpsUploadBuffer = (char*)malloc(UPLOAD_BUFFER_LENGTH);
     Serial.setTimeout(200);//~2 nmea messages at 9600bps
+    this->_uploadServerHost.setDefaultValue("api.devices.stutzthings.com");
+    this->_uploadServerPort.setDefaultValue(80);
 }
 
 GPSNode::~GPSNode() {
@@ -39,14 +43,14 @@ GPSNode::~GPSNode() {
 }
 
 void GPSNode::setup() {
-  Serial.println("1");
   this->_uploadServerUri = Homie.getConfiguration().mqtt.baseTopic + String(Homie.getConfiguration().deviceId) + String("/gps/raw");
   // this->_uploadServerUri = "test";
-  Serial.println("2");
   this->_sdQueue.setup();
-  Serial.println("3");
   this->_gpsTimer.setInterval(500, true);
   this->_metricsTimer.setInterval(60000, true);
+
+  // this->_homieNode.advertise("clearPendingData").settable(this->_onSetClearPendingData);
+
 }
 
 void GPSNode::loop() {
@@ -54,13 +58,13 @@ void GPSNode::loop() {
 
   //upload gps data to cloud
   if(Homie.isConnected()) {
-    if(this->_sdQueue.getCount() > 90000) {
+    if(this->_sdQueue.getCount() > UPLOAD_MIN_SAMPLES) {
       this->_sendNextGpsData();
     }
 
     if(this->_metricsTimer.check()) {
       this->_metricsTimer.tick();
-      Serial.println("Reporting metrics");
+      Serial.println("Reporting GPS metrics");
       this->_reportMetrics();
     }
   }
@@ -104,10 +108,19 @@ void GPSNode::loop() {
   }
 }
 
+// bool GPSNode::_onSetClearPendingData(const HomieRange& range, const String& value) {
+//   if(strcmp(value.c_str(), "true") == 0) {
+//     Serial.println("Clearing pending messages from internal persistent queue");
+//     this->_sdQueue.removeElements(this->_sdQueue.getCount());
+//     this->_homieNode.setProperty("clearPendingData").setRange(range).send("done");
+//   }
+// }
+
 void GPSNode::_sendNextGpsData() {
 
+  Serial.printf("Upload: Pending messages: %d\n", this->_sdQueue.getCount());
   Serial.println("Upload: preparation");
-  this->_sdQueue.flush();//avoid paralel flush() during server connection (too much mem)
+  this->_sdQueue.flush();//avoid parallel flush() during server connection (too much mem)
 
   if(this->_sdQueue.getCount()==0) {
     Serial.println("Upload: no data to send");
@@ -117,13 +130,18 @@ void GPSNode::_sendNextGpsData() {
   //connect to server and send various POST on the same connection
   WiFiClient client;
   // Serial.printf("Host=%s:%d\n", this->_configNode.getUploadServerHost().c_str(), this->_configNode.getUploadServerPort());
-  if (!client.connect(this->_uploadServerHost.c_str(), this->_uploadServerPort)) {
+  int startTime = millis();
+  if (!client.connect(this->_uploadServerHost.get(), this->_uploadServerPort.get())) {
+    this->_totalUploadCountError++;
+    this->_totalUploadTimeError+=(millis()-startTime);
     Serial.println("Upload: server connection failed");
     return;
   }
 
   //send
-  for(int i=0; i<100; i++) {
+  parei aqui... mqtt está desconectando durante POST. verificar se a performance usando mqtt para fazer o upload é adequada
+  //TODO Test best numbers for optimal throughput without losing mqtt connection
+  for(int i=0; i<1; i++) {
     // int len = 0;
     int sdRecordsCount = 0;
     int sdRecordsOK = 0;
@@ -147,11 +165,11 @@ void GPSNode::_sendNextGpsData() {
     if(strlen(this->_gpsUploadBuffer)>0) {
       Serial.printf("Upload: ok=%d err=%d\n", sdRecordsOK, sdRecordsError);
 
-      Serial.println("POST /" + String(this->_uploadServerUri));
+      Serial.println("POST /" + String(this->_uploadServerUri.c_str()));
       int startTime = millis();
       client.printf("POST /%s HTTP/1.1\r\nHost: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
                       this->_uploadServerUri.c_str(),
-                      this->_uploadServerHost.c_str(),
+                      this->_uploadServerHost.get(),
                       strlen(this->_gpsUploadBuffer)
       );
       client.print(this->_gpsUploadBuffer);
