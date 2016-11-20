@@ -6,13 +6,13 @@
 // 4.1- Using the `/wifi/status` Homie API endpoint, check the connection status and present a feedback to the user
 // 5- captive enables the device as a internet proxy using the `/proxy/control` Home API endpoint
 // 6- user inputs user and pass for stutzthings.com
-// 7- page makes a POST with user/pass to the `` stutzthings API endpoint and receives an deviceID, used to register the mqtt topic
-// 8- page makes a POST to the `/config` Homie API endpoint to store the configuration
+// 7- page makes a PUT with user/pass to the `` stutzthings API endpoint and receives an deviceID, used to register the mqtt topic
+// 8- page makes a PUT to the `/config` Homie API endpoint to store the configuration
 // 9- the device will restart and will be ready to go!
 
 var wifiConnectionCheckAttempts = 0;
 
-var WIFI_STATUS_CONNECTED = 'CONNECTED';
+var WIFI_STATUS_CONNECTED = 'connected';
 
 //Dynamic DOM elements
 var ui_wifi_password_input_group = document.createElement('div');
@@ -65,10 +65,10 @@ function ui_createWiFiNetworkDOMElement(ssid, rssi, encryption) {
   var li = document.createElement('li');
   li.setAttribute('data-network-name', ssid);
   li.innerHTML = '<em>' + ssid + '</em>' + '<button onclick="ui_selectWiFiNetwork(\'' + ssid + '\')">selecionar</button>';
-  li.onclick = function() {
-    ui_selectWiFiNetwork(ssid);
-  };
-  return el;
+  // li.onclick = function() {
+  //   ui_selectWiFiNetwork(ssid);
+  // };
+  return li;
 }
 
 function connectToSelectedWiFi() {
@@ -83,7 +83,7 @@ function connectToSelectedWiFi() {
   wifiData.password = el('wifi_password').value;
 
   showInfoMessage('Iniciando conexão à rede "' + wifiData.ssid + '". Aguarde alguns instantes...', 'Conectando o dispositivo ao Wi-Fi');
-  nanoajax.ajax({url: '/wifi/connect', method: 'POST', headers:{'Content-Type': 'application/json'}, body: wifiData}, function (code, responseText, request) {
+  nanoajax.ajax({url: '/wifi/connect', method: 'PUT', headers:{'Content-Type': 'application/json'}, body: JSON.stringify(wifiData)}, function (code, responseText, request) {
     var responseJSON = JSON.parse(responseText);
     if (code === 202) {
       showInfoMessage('Rede identificada. Finalizando conexão...', 'Conectando o dispositivo ao Wi-Fi');
@@ -121,6 +121,7 @@ function checkConnectionEstabilished() {
         return;
       }
     }else{
+      var responseJSON = JSON.parse(responseText);
       showErrorMessage('Houve um erro ao conectar o dispositivo à rede Wi-Fi. Detalhes: ' + responseJSON.error, 'Erro ao conectar-se a rede Wi-Fi');
       return;
     }
@@ -134,7 +135,7 @@ function checkConnectionEstabilished() {
   **/
 function enrollDeviceToStutzThingsAccount() {
   //request for /proxy/control to enable internet access using the device as AP
-  nanoajax.ajax({url: '/proxy/control', method: 'PUT', headers:{'Content-Type': 'application/json'}, body: { "enable": true } }, function (code, responseText, request) {
+  nanoajax.ajax({url: '/proxy/control', method: 'PUT', headers:{'Content-Type': 'application/json'}, body: JSON.stringify({ "enable": true }) }, function (code, responseText, request) {
     if (code === 200) {
 
       var account_id = el('stutzthings_account_id').value;
@@ -145,7 +146,7 @@ function enrollDeviceToStutzThingsAccount() {
         hardware_id       : el('stutzthings_hardware_id').value
       };
 
-      nanoajax.ajax({url: 'http://api.stutzthings.com/v1/' + account_id + '/' + device_id, method: 'POST', headers:{'Content-Type': 'application/json'}, body: registerPayload }, function (code, responseText, request) {
+      nanoajax.ajax({url: 'http://api.stutzthings.com/v1/' + account_id + '/' + device_id, method: 'PUT', headers:{'Content-Type': 'application/json'}, body: registerPayload }, function (code, responseText, request) {
         var responseJSON = JSON.parse(responseText);
         if (code === 200) {
           showSuccessMessage('Seu dispositivo foi registrado com sucesso em sua conta StutzThings e está pronto para ser usado. Ele reinciará agora para carregar a nova configuração e já poderá ser usado.','Configuração concluída com sucesso!')
