@@ -31,7 +31,9 @@ function showAvailableNetworks() {
 
       // show wi-fi networks list
       var wifiListElement = el('wifi_list');
-      wifiListElement.appendChild(ui_createWiFiNetworkDOMElement('li'));
+      for (var i = 0; i < responseJSON.networks.length; i++) {
+        wifiListElement.appendChild(ui_createWiFiNetworkDOMElement(responseJSON.networks[i].ssid, responseJSON.networks[i].rssi, responseJSON.networks[i].encryption));
+      }
 
     }else if (code===503) {
       showErrorMessage('Erro ao listar redes Wi-Fi disponíveis. Detalhes: ' + responseJSON.error, 'Erro ao listar redes Wi-Fi disponiveis');
@@ -44,9 +46,20 @@ function showAvailableNetworks() {
 
 function ui_selectWiFiNetwork(ssid) {
   el('wifi_name').value = ssid;
-  
+
   //reset the style of the current selected element and set the style in the new element
+  var wifiListElement = el('wifi_list');
+  for (var i = 0; i < wifiListElement.children.length; i++) {
+    wifiListElement.children[i].className = '';
+  }
+  var selectedNetwork = document.querySelector('[data-network-name="' + ssid + '"]');
+  selectedNetwork.className = 'selected';
+
   //open the password box right below the selected network
+  ui_wifi_password_input_group.remove();
+  ui_wifi_connect_button_group.remove();
+  selectedNetwork.appendChild(ui_wifi_password_input_group);
+  selectedNetwork.appendChild(ui_wifi_connect_button_group);
 }
 function ui_createWiFiNetworkDOMElement(ssid, rssi, encryption) {
   var li = document.createElement('li');
@@ -59,6 +72,12 @@ function ui_createWiFiNetworkDOMElement(ssid, rssi, encryption) {
 }
 
 function connectToSelectedWiFi() {
+  ui_wifi_password_input_group.className = '';
+  if (!el('wifi_password').value || el('wifi_password').value.length < 3) {
+    //hightlight the password input if its empty
+    ui_wifi_password_input_group.className = 'required-field';
+    return;
+  }
   var wifiData = {};
   wifiData.ssid = el('wifi_name').value;
   wifiData.password = el('wifi_password').value;
@@ -186,6 +205,7 @@ function showErrorMessage(msg, title) {
 
 
 //start the configuration process
+showAvailableNetworks();
 showElement('step_wifi_connect');
 
 // in nanoajax

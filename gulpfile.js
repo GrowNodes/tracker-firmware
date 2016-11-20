@@ -19,7 +19,7 @@ gulp.task('prepare', ["uglify", "minify-css"], function () {
     return gulp.src('src/captive/index.html')
         .pipe(inlinesource())
         .pipe(gzip({gzipOptions:{level:9}, extension:'gz', append:true}))
-        .pipe(rename("bundle_ui.gz"))
+        .pipe(rename("ui_bundle.gz"))
         .pipe(gulp.dest('data/homie'));
 });
 
