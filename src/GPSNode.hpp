@@ -19,9 +19,10 @@ namespace Tracker {
       SDQueue _sdQueue;
       HomieInternals::Timer _gpsTimer;
       HomieInternals::Timer _metricsTimer;
+      bool _initialized = false;
 //      String _uploadServerHost = String("api.devices.stutzthings.com");
-      HomieSetting<const char*> _uploadServerHost;
 //      int _uploadServerPort = 80;
+      HomieSetting<const char*> _uploadServerHost;
       HomieSetting<long> _uploadServerPort;
       String _uploadServerUri;
       bool _messageType = false;
@@ -31,7 +32,6 @@ namespace Tracker {
       void _reportMetrics();
       bool _readGpsRecord(const char* prefix, char* gpsRecord);
       bool _validateNmeaChecksum(char* gpsRecord);
-      // bool _onSetClearPendingData(const HomieRange& range, const String& value);
       int _fromHex(char a);
       unsigned long _totalRecordsReadSuccess = 0;
       unsigned long _totalRecordsReadError = 0;
@@ -42,5 +42,6 @@ namespace Tracker {
       unsigned long _totalUploadCountError = 0;
       unsigned long _totalUploadTimeError = 0;
       unsigned long _totalRecordsPendingUpload = 0;
+      // bool _onSetClearPendingData(const HomieRange& range, const String& value);
   };
 }

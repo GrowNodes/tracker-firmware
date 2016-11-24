@@ -4,7 +4,7 @@
 using namespace Tracker;
 
 SDData::SDData(String name) :
-  _name(name + ".p") {
+  _name(name) {
 }
 
 void SDData::setup() {
@@ -32,5 +32,7 @@ void SDData::setIntValue(int value) {
     _file.seek(0);
     _file.printf("#%d", value);
     _file.close();
+  } else {
+    Serial.println("SDData: Couldn't write value to file");
   }
 }

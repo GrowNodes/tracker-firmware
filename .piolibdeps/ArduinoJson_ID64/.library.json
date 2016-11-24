@@ -17,7 +17,7 @@
     "frameworks": [
         "arduino"
     ], 
-    "version": "5.6.7", 
+    "version": "5.7.1", 
     "export": {
         "exclude": [
             "scripts", 

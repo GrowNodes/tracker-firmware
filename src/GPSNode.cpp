@@ -26,8 +26,8 @@ const char CHAR_SPACE = ' ';
 GPSNode::GPSNode() :
   _homieNode(HomieNode("gps", "gps")),
   _uploadServerHost(HomieSetting<const char*>("uploadServerHost", "Host to receive POST with bulk GPS positions")),
-  _uploadServerPort(HomieSetting<long>("uploadServerPort", "Port for the POST of bulk GPS position")),
-  _sdQueue(SDQueue("gps-data", GPS_STORAGE_MAX_RECORDS, GPS_RECORD_LENGTH, GPS_STORAGE_BUFFER_SIZE)),
+  _uploadServerPort(HomieSetting<long>("uploadServerPort", "Port for the POST of bulk GPS positions")),
+  _sdQueue(SDQueue("gpsqueue", GPS_STORAGE_MAX_RECORDS, GPS_RECORD_LENGTH, GPS_STORAGE_BUFFER_SIZE)),
   _gpsTimer(HomieInternals::Timer()),
   _metricsTimer(HomieInternals::Timer()) {
     this->_gpsRecord = (char*)malloc(GPS_RECORD_LENGTH);
@@ -42,24 +42,37 @@ GPSNode::~GPSNode() {
   free(this->_gpsUploadBuffer);
 }
 
+bool gpsNode_configMode(const HomieRange& range, const String& value) {
+  Serial.printf("ENTERCONFIG CHANGED TO %s", value.c_str());
+  Homie.setBootModeNextBoot(Homie.MODE_CONFIG);
+  Homie.reboot();
+}
+
 void GPSNode::setup() {
   this->_uploadServerUri = Homie.getConfiguration().mqtt.baseTopic + String(Homie.getConfiguration().deviceId) + String("/gps/raw");
-  // this->_uploadServerUri = "test";
   this->_sdQueue.setup();
-  this->_gpsTimer.setInterval(500, true);
+  this->_gpsTimer.setInterval(1000, true);
   this->_metricsTimer.setInterval(60000, true);
 
-  // this->_homieNode.advertise("clearPendingData").settable(this->_onSetClearPendingData);
+  Serial.printf("Upload POST URL=http://%s:%d/%s\n", this->_uploadServerHost.get(), this->_uploadServerPort.get(), this->_uploadServerUri.c_str());
 
+  // this->_homieNode.advertise("clearPendingData").settable(this->_onSetClearPendingData);
+  this->_initialized = true;
+  Serial.println("GPS setup OK");
+
+  // this->_homieNode.advertise("enterConfig").settable(std::function<bool(const HomieRange&, const String&)> ([] (const HomieRange& range, const String& value) {
+  // }));
+  this->_homieNode.advertise("enterConfig").settable(gpsNode_configMode);
 }
 
 void GPSNode::loop() {
+  if(!this->_initialized) return;
   char* recordBuffer = this->_gpsRecord;
 
   //upload gps data to cloud
   if(Homie.isConnected()) {
     if(this->_sdQueue.getCount() > UPLOAD_MIN_SAMPLES) {
-      this->_sendNextGpsData();
+      //this->_sendNextGpsData();
     }
 
     if(this->_metricsTimer.check()) {
@@ -117,7 +130,7 @@ void GPSNode::loop() {
 // }
 
 void GPSNode::_sendNextGpsData() {
-
+  if(!this->_initialized) return;
   Serial.printf("Upload: Pending messages: %d\n", this->_sdQueue.getCount());
   Serial.println("Upload: preparation");
   this->_sdQueue.flush();//avoid parallel flush() during server connection (too much mem)
@@ -132,14 +145,13 @@ void GPSNode::_sendNextGpsData() {
   // Serial.printf("Host=%s:%d\n", this->_configNode.getUploadServerHost().c_str(), this->_configNode.getUploadServerPort());
   int startTime = millis();
   if (!client.connect(this->_uploadServerHost.get(), this->_uploadServerPort.get())) {
-    this->_totalUploadCountError++;
-    this->_totalUploadTimeError+=(millis()-startTime);
-    Serial.println("Upload: server connection failed");
-    return;
+     this->_totalUploadCountError++;
+     this->_totalUploadTimeError+=(millis()-startTime);
+     Serial.println("Upload: server connection failed");
+     return;
   }
 
   //send
-  parei aqui... mqtt está desconectando durante POST. verificar se a performance usando mqtt para fazer o upload é adequada
   //TODO Test best numbers for optimal throughput without losing mqtt connection
   for(int i=0; i<1; i++) {
     // int len = 0;
@@ -169,7 +181,8 @@ void GPSNode::_sendNextGpsData() {
       int startTime = millis();
       client.printf("POST /%s HTTP/1.1\r\nHost: %s\r\nContent-Length: %d\r\nContent-Type: text/plain\r\n\r\n",
                       this->_uploadServerUri.c_str(),
-                      this->_uploadServerHost.get(),
+                      "api.devices.stutzthings.com",
+                      // this->_uploadServerHost.get(),
                       strlen(this->_gpsUploadBuffer)
       );
       client.print(this->_gpsUploadBuffer);
@@ -236,6 +249,7 @@ void GPSNode::_sendNextGpsData() {
 }
 
 void GPSNode::_reportMetrics() {
+  if(!this->_initialized) return;
   this->_totalRecordsPendingUpload = this->_sdQueue.getCount();
 
   this->_homieNode.setProperty("totalUploadRecordCRCError").send(String(this->_totalUploadRecordCRCError));

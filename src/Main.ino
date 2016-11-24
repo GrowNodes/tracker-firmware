@@ -3,17 +3,19 @@
 #include <Homie.h>
 #include "GPSNode.hpp"
 #include "Watchdog.hpp"
+#include "utils/SDUtils.hpp"
 
 using namespace Tracker;
 
-GPSNode gpsNode;
 Watchdog watchdog;
+GPSNode gpsNode;
 
 void setup() {
   Serial.begin(9600);
   Serial.println("Stutz Tracker initialization");
 
   //initialize watchdog module
+  Serial.println("--Initializing Watchdog");
   watchdog.setup();
 
   //initialize Homie
@@ -21,8 +23,10 @@ void setup() {
   Serial.println("--Initializing Homie");
   Homie_setFirmware("stutz-tracker", "1.0.0");
   Homie_setBrand("StutzTracker");
+//  Homie.setBootMode(HomieInternals::BootMode::STANDALONE);
   Homie.setLoopFunction(loopHandler);
   Homie.setSetupFunction(setupHandler);
+  Homie.onEvent(onHomieEvent);
   Homie.disableLedFeedback();
   watchdog.ping();
   Homie.setup();
@@ -43,13 +47,22 @@ void loop() {
   watchdog.loop();
   Homie.loop();
   watchdog.loop();
-  gpsNode.loop();
+}
+
+void onHomieEvent(const HomieEvent& event) {
+  switch (event.type) {
+    case HomieEventType::ABOUT_TO_RESET:
+      SDUtils sdUtils;
+      sdUtils.setup();
+      sdUtils.deleteAllFilesOnCard();
+      break;
+  }
 }
 
 void setupHandler() {
-  // configNode.setup();
 }
 
+//loops only on NORMAL MODE
 void loopHandler() {
-  // configNode.loop();
+  gpsNode.loop();
 }
