@@ -1,5 +1,6 @@
 #include <Homie.h>
 #include "utils/SDQueue.hpp"
+#include "Watchdog.hpp"
 #include "../lib/homie-esp8266/src/Homie/Timer.hpp"
 
 namespace Tracker {
@@ -8,20 +9,18 @@ namespace Tracker {
   const int GPS_STORAGE_MAX_RECORDS = 300000;
   const int GPS_STORAGE_BUFFER_SIZE = 10;
   const int UPLOAD_MIN_SAMPLES = 20;
-  class GPSNode {
+  class GPSNode:public HomieNode {
     public:
-      GPSNode();
+      GPSNode(Watchdog watchdog);
       ~GPSNode();
       void setup();
       void loop();
     private:
-      HomieNode _homieNode;
+      Watchdog _watchdog;
       SDQueue _sdQueue;
       HomieInternals::Timer _gpsTimer;
       HomieInternals::Timer _metricsTimer;
       bool _initialized = false;
-//      String _uploadServerHost = String("api.devices.stutzthings.com");
-//      int _uploadServerPort = 80;
       HomieSetting<const char*> _uploadServerHost;
       HomieSetting<long> _uploadServerPort;
       String _uploadServerUri;
@@ -42,6 +41,8 @@ namespace Tracker {
       unsigned long _totalUploadCountError = 0;
       unsigned long _totalUploadTimeError = 0;
       unsigned long _totalRecordsPendingUpload = 0;
+      unsigned long _totalUploadBytesSuccess = 0;
+      unsigned long _totalUploadBytesError = 0;
       // bool _onSetClearPendingData(const HomieRange& range, const String& value);
   };
 }

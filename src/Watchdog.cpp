@@ -4,24 +4,22 @@
 using namespace Tracker;
 
 //String name, int maxQueueSize, int recordBytes, int bufferRecords
-Watchdog::Watchdog() :
-  _homieNode(HomieNode("watchdog", "watchdog")),
+Watchdog::Watchdog() : HomieNode("watchdog", "watchdog"),
   _timer(HomieInternals::Timer()),
   _metricsTimer(HomieInternals::Timer()),
   _state(0),
   _signalPin(16) {
+    this->_timer.setInterval(500, true);
+    this->_metricsTimer.setInterval(30000, true);
+    pinMode(this->_signalPin, OUTPUT);
+    this->ping();
 }
 
 Watchdog::~Watchdog() {
 }
 
 void Watchdog::setup() {
-  this->_timer.setInterval(500, true);
-  this->_metricsTimer.setInterval(30000, true);
-  pinMode(this->_signalPin, OUTPUT);
-
-  this->ping();
-
+  Serial.println("\n--Initializing Watchdog");
   //boot counter
 //  Serial.println("Reading boot count from storage");
   SDData bootCounter = SDData("/bootn.txt");
@@ -53,14 +51,16 @@ void Watchdog::loop() {
 }
 
 void Watchdog::ping() {
-  if(!this->_initialized) return;
-  if(this->_state==0) {
-    this->_state = 1;
-    digitalWrite(this->_signalPin, LOW);
-  } else {
-    this->_state = 0;
-    digitalWrite(this->_signalPin, HIGH);
-  }
+  // if(this->_state==0) {
+  //   this->_state = 1;
+  //   digitalWrite(this->_signalPin, LOW);
+  // } else {
+  //   this->_state = 0;
+  //   digitalWrite(this->_signalPin, HIGH);
+  // }
+  digitalWrite(this->_signalPin, LOW);
+  delay(10);
+  digitalWrite(this->_signalPin, HIGH);
 
   //metrics
   this->_pingCount++;
@@ -75,7 +75,7 @@ void Watchdog::ping() {
 
 void Watchdog::_reportMetrics() {
   if(!this->_initialized) return;
-  this->_homieNode.setProperty("maxTimeBetweenPings").send(String(this->_maxTimeBetweenPings));
-  this->_homieNode.setProperty("pingCount").send(String(this->_pingCount));
-  this->_homieNode.setProperty("bootCount").send(String(this->_bootCount));
+  setProperty("maxTimeBetweenPings").send(String(this->_maxTimeBetweenPings));
+  setProperty("pingCount").send(String(this->_pingCount));
+  setProperty("bootCount").send(String(this->_bootCount));
 }

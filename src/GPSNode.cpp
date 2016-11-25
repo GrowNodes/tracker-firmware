@@ -23,8 +23,8 @@ const char* GPS_RMC = "$GPRMC";
 const char CHAR_SPACE = ' ';
 
 //String name, int maxQueueSize, int recordBytes, int bufferRecords
-GPSNode::GPSNode() :
-  _homieNode(HomieNode("gps", "gps")),
+GPSNode::GPSNode(Watchdog watchdog) : HomieNode("gps", "gps"),
+  _watchdog(watchdog),
   _uploadServerHost(HomieSetting<const char*>("uploadServerHost", "Host to receive POST with bulk GPS positions")),
   _uploadServerPort(HomieSetting<long>("uploadServerPort", "Port for the POST of bulk GPS positions")),
   _sdQueue(SDQueue("gpsqueue", GPS_STORAGE_MAX_RECORDS, GPS_RECORD_LENGTH, GPS_STORAGE_BUFFER_SIZE)),
@@ -35,6 +35,7 @@ GPSNode::GPSNode() :
     Serial.setTimeout(200);//~2 nmea messages at 9600bps
     this->_uploadServerHost.setDefaultValue("api.devices.stutzthings.com");
     this->_uploadServerPort.setDefaultValue(80);
+    _watchdog.ping();
 }
 
 GPSNode::~GPSNode() {
@@ -42,13 +43,8 @@ GPSNode::~GPSNode() {
   free(this->_gpsUploadBuffer);
 }
 
-bool gpsNode_configMode(const HomieRange& range, const String& value) {
-  Serial.printf("ENTERCONFIG CHANGED TO %s", value.c_str());
-  Homie.setBootModeNextBoot(Homie.MODE_CONFIG);
-  Homie.reboot();
-}
-
 void GPSNode::setup() {
+  Serial.println("\n--Initializing GPS");
   this->_uploadServerUri = Homie.getConfiguration().mqtt.baseTopic + String(Homie.getConfiguration().deviceId) + String("/gps/raw");
   this->_sdQueue.setup();
   this->_gpsTimer.setInterval(1000, true);
@@ -56,13 +52,26 @@ void GPSNode::setup() {
 
   Serial.printf("Upload POST URL=http://%s:%d/%s\n", this->_uploadServerHost.get(), this->_uploadServerPort.get(), this->_uploadServerUri.c_str());
 
-  // this->_homieNode.advertise("clearPendingData").settable(this->_onSetClearPendingData);
   this->_initialized = true;
   Serial.println("GPS setup OK");
 
-  // this->_homieNode.advertise("enterConfig").settable(std::function<bool(const HomieRange&, const String&)> ([] (const HomieRange& range, const String& value) {
-  // }));
-  this->_homieNode.advertise("enterConfig").settable(gpsNode_configMode);
+  advertise("clearData").settable([this](const HomieRange& range, const String& value) -> bool {
+    if(strcmp(value.c_str(), "true") == 0) {
+      Serial.println("Clearing pending messages");
+      this->_sdQueue.removeElements(this->_sdQueue.getCount());
+      this->setProperty("clearData").setRange(range).send("true");
+    }
+  });
+
+  // advertise("configMode").settable([this](const HomieRange& range, const String& value) -> bool {
+  //   if(strcmp(value.c_str(), "true") == 0) {
+  //     Serial.println("CONFIG MODE requested");
+  //     Homie.setBootModeNextBoot(Homie.MODE_CONFIG);
+  //     Homie.reboot();
+  //   }
+  // });
+
+  _watchdog.ping();
 }
 
 void GPSNode::loop() {
@@ -72,7 +81,7 @@ void GPSNode::loop() {
   //upload gps data to cloud
   if(Homie.isConnected()) {
     if(this->_sdQueue.getCount() > UPLOAD_MIN_SAMPLES) {
-      //this->_sendNextGpsData();
+      this->_sendNextGpsData();
     }
 
     if(this->_metricsTimer.check()) {
@@ -88,6 +97,7 @@ void GPSNode::loop() {
 
     //read message from module
     bool valid = false;
+    _watchdog.ping();
     if(this->_messageType) {
       // Serial.println("Recording GGA GPS message");
       valid = this->_readGpsRecord(GPS_GGA, recordBuffer);
@@ -96,6 +106,7 @@ void GPSNode::loop() {
       valid = this->_readGpsRecord(GPS_RMC, recordBuffer);
     }
     this->_messageType = !this->_messageType;
+    _watchdog.ping();
 
     //check data integrity and record
     if(valid) {
@@ -107,10 +118,11 @@ void GPSNode::loop() {
 
       //send position online if connected
       if(Homie.isConnected()) {
+        _watchdog.ping();
         if(this->_messageType) {
-          this->_homieNode.setProperty("rmc").send(recordBuffer);
+          setProperty("rmc").send(recordBuffer);
         } else {
-          this->_homieNode.setProperty("gga").send(recordBuffer);
+          setProperty("gga").send(recordBuffer);
         }
       }
 
@@ -121,15 +133,8 @@ void GPSNode::loop() {
   }
 }
 
-// bool GPSNode::_onSetClearPendingData(const HomieRange& range, const String& value) {
-//   if(strcmp(value.c_str(), "true") == 0) {
-//     Serial.println("Clearing pending messages from internal persistent queue");
-//     this->_sdQueue.removeElements(this->_sdQueue.getCount());
-//     this->_homieNode.setProperty("clearPendingData").setRange(range).send("done");
-//   }
-// }
-
 void GPSNode::_sendNextGpsData() {
+  int startTimeUploading = millis();
   if(!this->_initialized) return;
   Serial.printf("Upload: Pending messages: %d\n", this->_sdQueue.getCount());
   Serial.println("Upload: preparation");
@@ -143,17 +148,20 @@ void GPSNode::_sendNextGpsData() {
   //connect to server and send various POST on the same connection
   WiFiClient client;
   // Serial.printf("Host=%s:%d\n", this->_configNode.getUploadServerHost().c_str(), this->_configNode.getUploadServerPort());
+  _watchdog.ping();
   int startTime = millis();
   if (!client.connect(this->_uploadServerHost.get(), this->_uploadServerPort.get())) {
      this->_totalUploadCountError++;
      this->_totalUploadTimeError+=(millis()-startTime);
      Serial.println("Upload: server connection failed");
+     _watchdog.ping();
      return;
   }
+  _watchdog.ping();
 
   //send
-  //TODO Test best numbers for optimal throughput without losing mqtt connection
-  for(int i=0; i<1; i++) {
+  //If this takes more than 10s, abort and loop again so that Wifi and MQTT won't lose connection
+  for(int i=0; i<10 && ((millis()-startTimeUploading)<10000); i++) {
     // int len = 0;
     int sdRecordsCount = 0;
     int sdRecordsOK = 0;
@@ -175,7 +183,7 @@ void GPSNode::_sendNextGpsData() {
     }
 
     if(strlen(this->_gpsUploadBuffer)>0) {
-      Serial.printf("Upload: ok=%d err=%d\n", sdRecordsOK, sdRecordsError);
+      Serial.printf("Upload: records=%d err=%d\n", sdRecordsOK, sdRecordsError);
 
       Serial.println("POST /" + String(this->_uploadServerUri.c_str()));
       int startTime = millis();
@@ -186,6 +194,7 @@ void GPSNode::_sendNextGpsData() {
                       strlen(this->_gpsUploadBuffer)
       );
       client.print(this->_gpsUploadBuffer);
+      _watchdog.ping();
       // Serial.println("SENT");
 
       //wait for response available
@@ -194,11 +203,13 @@ void GPSNode::_sendNextGpsData() {
         if (millis() - timeout > 5000) {
           Serial.println("Upload: server response timeout");
           client.stop();
+          this->_totalUploadBytesError += strlen(this->_gpsUploadBuffer);
           this->_totalUploadCountError++;
           this->_totalUploadTimeError+=(millis()-startTime);
           return;
         }
         delay(50);
+        _watchdog.ping();
       }
       // Serial.println("RECEIVED RESPONSE");
 
@@ -206,9 +217,11 @@ void GPSNode::_sendNextGpsData() {
       bool success = false;
       if(client.readStringUntil(CHAR_SPACE).length()>0) {
         String code = client.readStringUntil(CHAR_SPACE);
+        _watchdog.ping();
         if(code == "201") {
           Serial.println("Upload: 201 Created");
           success = true;
+          this->_totalUploadBytesSuccess += strlen(this->_gpsUploadBuffer);
           this->_totalUploadCountSuccess++;
           this->_totalUploadTimeSuccess+=(millis()-startTime);
           this->_totalUploadRecordsSuccess+=sdRecordsOK;
@@ -216,17 +229,20 @@ void GPSNode::_sendNextGpsData() {
           this->_sdQueue.removeElements(sdRecordsCount);
           // Serial.println("Upload: sent records removed from disk");
         } else {
+          this->_totalUploadBytesError += strlen(this->_gpsUploadBuffer);
           this->_totalUploadCountError++;
           this->_totalUploadTimeError+=(millis()-startTime);
           Serial.println("Upload: server error " + String(code));
         }
       } else {
+        this->_totalUploadBytesError += strlen(this->_gpsUploadBuffer);
         this->_totalUploadCountError++;
         this->_totalUploadTimeError+=(millis()-startTime);
         Serial.println("Upload: invalid server response");
       }
       //drain response data
       // Serial.println("RESPONSE DRAIN0");
+      _watchdog.ping();
       while(client.available()>0) {
         client.read();
       }
@@ -241,7 +257,9 @@ void GPSNode::_sendNextGpsData() {
       }
       break;
     }
+    _watchdog.ping();
     yield();
+    _watchdog.ping();
     // Serial.println("FINISHED POST");
   }
 
@@ -252,15 +270,19 @@ void GPSNode::_reportMetrics() {
   if(!this->_initialized) return;
   this->_totalRecordsPendingUpload = this->_sdQueue.getCount();
 
-  this->_homieNode.setProperty("totalUploadRecordCRCError").send(String(this->_totalUploadRecordCRCError));
-  this->_homieNode.setProperty("totalUploadCountSuccess").send(String(this->_totalUploadCountSuccess));
-  this->_homieNode.setProperty("totalUploadTimeSuccess").send(String(this->_totalUploadTimeSuccess));
-  this->_homieNode.setProperty("totalUploadRecordsSuccess").send(String(this->_totalUploadRecordsSuccess));
-  this->_homieNode.setProperty("totalUploadCountError").send(String(this->_totalUploadCountError));
-  this->_homieNode.setProperty("totalUploadTimeError").send(String(this->_totalUploadTimeError));
-  this->_homieNode.setProperty("totalRecordsReadSuccess").send(String(this->_totalRecordsReadSuccess));
-  this->_homieNode.setProperty("totalRecordsReadError").send(String(this->_totalRecordsReadError));
-  this->_homieNode.setProperty("totalRecordsPendingUpload").send(String(this->_totalRecordsPendingUpload));
+  _watchdog.ping();
+  setProperty("totalUploadRecordCRCError").send(String(this->_totalUploadRecordCRCError));
+  setProperty("totalUploadCountSuccess").send(String(this->_totalUploadCountSuccess));
+  setProperty("totalUploadTimeSuccess").send(String(this->_totalUploadTimeSuccess));
+  setProperty("totalUploadRecordsSuccess").send(String(this->_totalUploadRecordsSuccess));
+  setProperty("totalUploadCountError").send(String(this->_totalUploadCountError));
+  setProperty("totalUploadTimeError").send(String(this->_totalUploadTimeError));
+  setProperty("totalRecordsReadSuccess").send(String(this->_totalRecordsReadSuccess));
+  setProperty("totalRecordsReadError").send(String(this->_totalRecordsReadError));
+  setProperty("totalRecordsPendingUpload").send(String(this->_totalRecordsPendingUpload));
+  setProperty("totalUploadBytesSuccess").send(String(this->_totalUploadBytesSuccess));
+  setProperty("totalUploadBytesError").send(String(this->_totalUploadBytesError));
+  _watchdog.ping();
 }
 
 bool GPSNode::_readGpsRecord(const char* prefix, char* gpsRecord) {
@@ -278,6 +300,7 @@ bool GPSNode::_readGpsRecord(const char* prefix, char* gpsRecord) {
     memset(gpsRecord+GPS_RECORD_LENGTH-1, 0, 1);
     valid = _validateNmeaChecksum(gpsRecord);
     yield();
+    _watchdog.ping();
   } while(!valid && t++<2);//4
 
   return valid;
