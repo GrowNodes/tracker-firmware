@@ -6,13 +6,21 @@
 // 4.1- Using the `/wifi/status` Homie API endpoint, check the connection status and present a feedback to the user
 // 5- captive enables the device as a internet proxy using the `/proxy/control` Home API endpoint
 // 6- user inputs user and pass for stutzthings.com
-// 7- page makes a POST with user/pass to the `` stutzthings API endpoint and receives an deviceID, used to register the mqtt topic
-// 8- page makes a POST to the `/config` Homie API endpoint to store the configuration
+// 7- page makes a PUT with user/pass to the `` stutzthings API endpoint and receives an deviceID, used to register the mqtt topic
+// 8- page makes a PUT to the `/config` Homie API endpoint to store the configuration
 // 9- the device will restart and will be ready to go!
 
 var wifiConnectionCheckAttempts = 0;
 
-var WIFI_STATUS_CONNECTED = 'CONNECTED';
+var WIFI_STATUS_CONNECTED = 'connected';
+
+//Dynamic DOM elements
+var ui_wifi_password_input_group = document.createElement('div');
+ui_wifi_password_input_group.innerHTML = '<input id="wifi_password" type="password" name="wifi_password" placeholder="digite a senha do Wi-Fi"></input>';
+
+var ui_wifi_connect_button_group = document.createElement('div');
+ui_wifi_connect_button_group.innerHTML = '<input type="button" name="wifi_connect_action" value="Conectar" onclick="connectToSelectedWiFi()">';
+
 
 function showAvailableNetworks() {
   showInfoMessage('Buscando por redes Wi-Fi para iniciar o processo de configuração do dispositivo na Internet...', 'Procurando redes Wi-Fi disponíveis');
@@ -23,6 +31,9 @@ function showAvailableNetworks() {
 
       // show wi-fi networks list
       var wifiListElement = el('wifi_list');
+      for (var i = 0; i < responseJSON.networks.length; i++) {
+        wifiListElement.appendChild(ui_createWiFiNetworkDOMElement(responseJSON.networks[i].ssid, responseJSON.networks[i].rssi, responseJSON.networks[i].encryption));
+      }
 
     }else if (code===503) {
       showErrorMessage('Erro ao listar redes Wi-Fi disponíveis. Detalhes: ' + responseJSON.error, 'Erro ao listar redes Wi-Fi disponiveis');
@@ -33,13 +44,46 @@ function showAvailableNetworks() {
   });
 }
 
+function ui_selectWiFiNetwork(ssid) {
+  el('wifi_name').value = ssid;
+
+  //reset the style of the current selected element and set the style in the new element
+  var wifiListElement = el('wifi_list');
+  for (var i = 0; i < wifiListElement.children.length; i++) {
+    wifiListElement.children[i].className = '';
+  }
+  var selectedNetwork = document.querySelector('[data-network-name="' + ssid + '"]');
+  selectedNetwork.className = 'selected';
+
+  //open the password box right below the selected network
+  ui_wifi_password_input_group.remove();
+  ui_wifi_connect_button_group.remove();
+  selectedNetwork.appendChild(ui_wifi_password_input_group);
+  selectedNetwork.appendChild(ui_wifi_connect_button_group);
+}
+function ui_createWiFiNetworkDOMElement(ssid, rssi, encryption) {
+  var li = document.createElement('li');
+  li.setAttribute('data-network-name', ssid);
+  li.innerHTML = '<em>' + ssid + '</em>' + '<button onclick="ui_selectWiFiNetwork(\'' + ssid + '\')">selecionar</button>';
+  // li.onclick = function() {
+  //   ui_selectWiFiNetwork(ssid);
+  // };
+  return li;
+}
+
 function connectToSelectedWiFi() {
+  ui_wifi_password_input_group.className = '';
+  if (!el('wifi_password').value || el('wifi_password').value.length < 3) {
+    //hightlight the password input if its empty
+    ui_wifi_password_input_group.className = 'required-field';
+    return;
+  }
   var wifiData = {};
   wifiData.ssid = el('wifi_name').value;
   wifiData.password = el('wifi_password').value;
 
   showInfoMessage('Iniciando conexão à rede "' + wifiData.ssid + '". Aguarde alguns instantes...', 'Conectando o dispositivo ao Wi-Fi');
-  nanoajax.ajax({url: '/wifi/connect', method: 'POST', headers:{'Content-Type': 'application/json'}, body: wifiData}, function (code, responseText, request) {
+  nanoajax.ajax({url: '/wifi/connect', method: 'PUT', headers:{'Content-Type': 'application/json'}, body: JSON.stringify(wifiData)}, function (code, responseText, request) {
     var responseJSON = JSON.parse(responseText);
     if (code === 202) {
       showInfoMessage('Rede identificada. Finalizando conexão...', 'Conectando o dispositivo ao Wi-Fi');
@@ -77,6 +121,7 @@ function checkConnectionEstabilished() {
         return;
       }
     }else{
+      var responseJSON = JSON.parse(responseText);
       showErrorMessage('Houve um erro ao conectar o dispositivo à rede Wi-Fi. Detalhes: ' + responseJSON.error, 'Erro ao conectar-se a rede Wi-Fi');
       return;
     }
@@ -90,7 +135,7 @@ function checkConnectionEstabilished() {
   **/
 function enrollDeviceToStutzThingsAccount() {
   //request for /proxy/control to enable internet access using the device as AP
-  nanoajax.ajax({url: '/proxy/control', method: 'PUT', headers:{'Content-Type': 'application/json'}, body: { "enable": true } }, function (code, responseText, request) {
+  nanoajax.ajax({url: '/proxy/control', method: 'PUT', headers:{'Content-Type': 'application/json'}, body: JSON.stringify({ "enable": true }) }, function (code, responseText, request) {
     if (code === 200) {
 
       var account_id = el('stutzthings_account_id').value;
@@ -101,7 +146,7 @@ function enrollDeviceToStutzThingsAccount() {
         hardware_id       : el('stutzthings_hardware_id').value
       };
 
-      nanoajax.ajax({url: 'http://api.stutzthings.com/v1/' + account_id + '/' + device_id, method: 'POST', headers:{'Content-Type': 'application/json'}, body: registerPayload }, function (code, responseText, request) {
+      nanoajax.ajax({url: 'http://api.stutzthings.com/v1/' + account_id + '/' + device_id, method: 'PUT', headers:{'Content-Type': 'application/json'}, body: registerPayload }, function (code, responseText, request) {
         var responseJSON = JSON.parse(responseText);
         if (code === 200) {
           showSuccessMessage('Seu dispositivo foi registrado com sucesso em sua conta StutzThings e está pronto para ser usado. Ele reinciará agora para carregar a nova configuração e já poderá ser usado.','Configuração concluída com sucesso!')
@@ -161,6 +206,7 @@ function showErrorMessage(msg, title) {
 
 
 //start the configuration process
+showAvailableNetworks();
 showElement('step_wifi_connect');
 
 // in nanoajax
