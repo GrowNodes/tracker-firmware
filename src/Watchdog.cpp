@@ -51,21 +51,19 @@ void Watchdog::loop() {
 }
 
 void Watchdog::ping() {
-  // if(this->_state==0) {
-  //   this->_state = 1;
-  //   digitalWrite(this->_signalPin, LOW);
-  // } else {
-  //   this->_state = 0;
-  //   digitalWrite(this->_signalPin, HIGH);
-  // }
-  digitalWrite(this->_signalPin, LOW);
-  delay(10);
-  digitalWrite(this->_signalPin, HIGH);
+  if(this->_state==0) {
+    this->_state = 1;
+    digitalWrite(this->_signalPin, LOW);
+  } else {
+    this->_state = 0;
+    digitalWrite(this->_signalPin, HIGH);
+  }
 
   //metrics
   this->_pingCount++;
   if((this->_lastPingTime>0) && (millis()-this->_lastPingTime) > this->_maxTimeBetweenPings) {
     this->_maxTimeBetweenPings = (millis()-this->_lastPingTime);
+    Serial.printf("LARGEST WATCHDOG TIME FOR NOW: %d\n", this->_maxTimeBetweenPings);
   }
   this->_lastPingTime = millis();
 
