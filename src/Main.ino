@@ -1,13 +1,13 @@
 //tested against https://github.com/esp8266/Arduino.git version 2.3.0-rc1
 
 #include <Homie.h>
-#include "GPSNode.hpp"
-#include "utils/SDUtils.hpp"
+#include "GPSReader.hpp"
 
 using namespace Tracker;
 
-Watchdog watchdog;
-GPSNode gpsNode = GPSNode(watchdog);
+Watchdog watchdog = Watchdog();
+GPSUploader gpsUploader = GPSUploader(watchdog);
+GPSReader gpsReader = GPSReader(watchdog, gpsUploader);
 
 void setup() {
   watchdog.ping();
